@@ -3,6 +3,7 @@ import logging
 import functools
 import json
 from concurrent.futures import ThreadPoolExecutor
+from typing import Iterable, Tuple
 
 from aiohttp import web
 from common.exceptions import BackendError, BackendNetworkError, AppError
@@ -69,15 +70,15 @@ class CommonApi(metaclass=abc.ABCMeta):
         """Should create an instance of app"""
         pass
 
-    @staticmethod
+    @property
     @abc.abstractmethod
-    def _yield_routes():
+    def routes(self) -> Iterable[Tuple[str, str, str]]:
         """Returns iterable collection of tuples: [(method, url, handler_name), ...]"""
-        return ()
+        pass
 
     def _fill_router(self):
         router = self.web_app.router
-        for method, url, handler in self._yield_routes():
+        for method, url, handler in self.routes:
             router.add_route(method, url, self.to(handler))
 
     async def _wrap(self, func, request):

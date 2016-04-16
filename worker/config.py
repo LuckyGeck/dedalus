@@ -17,5 +17,8 @@ _WORKER_DEFAULT_CONFIG = {
     'BACKEND': 'InMemoryBackend',
     'HEARTBEAT_TIMEOUT': 300,
 
-    'PLUGINS_DIR': './plugins',
+    'PLUGINS': {
+        'EXECUTORS_DIR': 'plugins/executors',
+        'RESOURCES_DIR': 'plugins/resources',
+    }
 }

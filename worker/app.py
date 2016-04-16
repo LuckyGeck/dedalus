@@ -5,12 +5,16 @@ import asyncio
 import logging
 import json as js
 from worker.config import WorkerConfig
+from worker.executor import Executors
+from worker.resource import Resources
 from common.api import CommonApi, AppOk, AppError
 
 
 class WorkerApp:
     def __init__(self, config: WorkerConfig):
         self.config = config
+        self.executors = Executors(config['PLUGINS']['EXECUTORS_DIR'])
+        self.resources = Resources(config['PLUGINS']['RESOURCES_DIR'])
 
     def hello(self, args):
         return AppOk('Hello')
@@ -21,8 +25,8 @@ class WorkerApi(CommonApi):
     def _create_app(loop, config):
         return WorkerApp(config)
 
-    @staticmethod
-    def _yield_routes():
+    @property
+    def routes(self):
         return [
             ('GET', '/hello', 'hello')
         ]
