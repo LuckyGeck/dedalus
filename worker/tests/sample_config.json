@@ -1,0 +1,11 @@
+{
+  "api": {
+    "common_logger": "dedalus.api.common",
+    "access_logger": "dedalus.api.access"
+  },
+  "backend": "InMemoryBackend",
+  "plugins": {
+    "executors_dir": "plugins/executors",
+    "resources_dir": "plugins/resources"
+  }
+}

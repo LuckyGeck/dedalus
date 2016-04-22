@@ -1,4 +1,5 @@
 import abc
+
 from util.plugins import PluginBase, PluginsMaster
 
 

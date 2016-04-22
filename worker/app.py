@@ -2,25 +2,29 @@
 
 import argparse
 import asyncio
-import logging
 import json as js
+import logging
+
+from common.api import CommonApi, AppOk
 from worker.config import WorkerConfig
 from worker.executor import Executors
 from worker.resource import Resources
-from common.api import CommonApi, AppOk, AppError
 
 
 class WorkerApp:
     def __init__(self, config: WorkerConfig):
         self.config = config
-        self.executors = Executors(config['PLUGINS']['EXECUTORS_DIR'])
-        self.resources = Resources(config['PLUGINS']['RESOURCES_DIR'])
+        self.executors = Executors(config.plugins.executors_dir)
+        self.resources = Resources(config.plugins.resources_dir)
 
     def hello(self, args):
         return AppOk('Hello')
 
 
 class WorkerApi(CommonApi):
+    def __init__(self, loop, config: WorkerConfig):
+        super().__init__(loop=loop, api_config=config.api, app_config=config)
+
     @staticmethod
     def _create_app(loop, config):
         return WorkerApp(config)
@@ -64,5 +68,6 @@ if __name__ == '__main__':
 
     config = WorkerConfig()
     if args.config:
-        config.load_from_json(js.load(args.config))
+        config.from_json(js.load(args.config))
+    print('Config used:', js.dumps(config.to_json(), indent=2))
     main(config, args)

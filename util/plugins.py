@@ -1,8 +1,9 @@
 import abc
-import pkgutil
 import inspect
 import logging
+import pkgutil
 from os.path import join
+
 from util.symver import SymVer
 
 

@@ -1,13 +1,14 @@
 import abc
-import logging
 import functools
 import json
+import logging
 from concurrent.futures import ThreadPoolExecutor
 from typing import Iterable, Tuple
 
 from aiohttp import web
 from common.exceptions import BackendError, BackendNetworkError, AppError
 from util.enum import Enum
+from common.api_config import CommonApiConfig
 
 
 class ErrorCode(metaclass=Enum):
@@ -50,23 +51,23 @@ def json_response(*args, **kwargs):
 
 
 class CommonApi(metaclass=abc.ABCMeta):
-    def __init__(self, loop, config):
+    def __init__(self, loop, api_config: CommonApiConfig, app_config):
         self.loop = loop
-        self.host = config['BIND_HOST']
-        self.port = config['BIND_PORT']
+        self.host = api_config.host
+        self.port = api_config.port
 
-        self.logger = logging.getLogger('dedalus.worker.api')
-        self.access_log = logging.getLogger('dedalus.worker.access_log')
+        self.logger = logging.getLogger(api_config.common_logger)
+        self.access_log = logging.getLogger(api_config.access_logger)
         self.web_app = None
         self.handler = None
         self.server = None
 
         self.executor = ThreadPoolExecutor()
-        self.app = self._create_app(loop, config)
+        self.app = self._create_app(loop, app_config)
 
     @staticmethod
     @abc.abstractmethod
-    def _create_app(loop, config):
+    def _create_app(loop, app_config):
         """Should create an instance of app"""
         pass
 

@@ -1,24 +1,13 @@
-class WorkerConfig(dict):
-    def __init__(self):
-        self._load_defaults()
-
-    def load_from_json(self, config):
-        for k, v in config.items():
-            self[k] = v
-
-    def _load_defaults(self):
-        self.load_from_json(_WORKER_DEFAULT_CONFIG)
+from common.api_config import CommonApiConfig
+from util.config import Config, ConfigField
 
 
-_WORKER_DEFAULT_CONFIG = {
-    'BIND_HOST': 'localhost',
-    'BIND_PORT': 8080,
+class PluginsConfig(Config):
+    executors_dir = ConfigField(type=str, required=True, default='plugins/executors')
+    resources_dir = ConfigField(type=str, required=True, default='plugins/resources')
 
-    'BACKEND': 'InMemoryBackend',
-    'HEARTBEAT_TIMEOUT': 300,
 
-    'PLUGINS': {
-        'EXECUTORS_DIR': 'plugins/executors',
-        'RESOURCES_DIR': 'plugins/resources',
-    }
-}
+class WorkerConfig(Config):
+    api = CommonApiConfig(common_logger='dedalus.api.common', access_logger='dedalus.api.access')
+    backend = ConfigField(type=str, required=True, default='InMemoryBackend')
+    plugins = PluginsConfig()
