@@ -1,0 +1,8 @@
+bash:
+  Installed: 4.3-7ubuntu1.5
+  Candidate: 4.3-7ubuntu1.5
+  Version table:
+ *** 4.3-7ubuntu1.5 0
+        100 /var/lib/dpkg/status
+     4.3-6ubuntu1 0
+        500 http://archive.ubuntu.com/ubuntu/ trusty/main amd64 Packages
