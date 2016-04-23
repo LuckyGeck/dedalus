@@ -16,7 +16,11 @@ class Executor(PluginBase, metaclass=abc.ABCMeta):
         pass
 
     @abc.abstractmethod
-    def execute(self):
+    def start(self):
+        pass
+
+    @abc.abstractmethod
+    def ping(self):
         pass
 
 
