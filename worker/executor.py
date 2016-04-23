@@ -1,12 +1,19 @@
 import abc
 
 from util.plugins import PluginBase, PluginsMaster
+from util.config import Config
 
 
 class Executor(PluginBase, metaclass=abc.ABCMeta):
-    def __init__(self, work_dir: str):
-        assert work_dir, 'Working dir for an executor should be set'
-        self.work_dir = work_dir
+    def __init__(self, config: dict = None, **kwargs):
+        assert config is None or not kwargs, 'Only one of config and kwargs should be set'
+        self.config.from_json(kwargs if config is None else config)
+        self.config.verify()
+
+    @property
+    @abc.abstractmethod
+    def config(self) -> Config:
+        pass
 
     @abc.abstractmethod
     def execute(self):
