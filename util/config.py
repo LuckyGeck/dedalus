@@ -12,11 +12,11 @@ class IncorrectFieldType(Exception):
     pass
 
 
-class BaseConfig:
+class IncorrectFieldFormat(Exception):
     pass
 
 
-class BaseConfigOps(metaclass=abc.ABCMeta):
+class BaseConfig(metaclass=abc.ABCMeta):
     @abc.abstractmethod
     def from_json(self, json_doc: dict, skip_unknown_fields=False):
         pass
@@ -25,8 +25,32 @@ class BaseConfigOps(metaclass=abc.ABCMeta):
     def to_json(self):
         pass
 
+    def verify(self, path_to_node: str = ''):
+        pass
 
-class MetaConfig(type):
+
+class ListConfigField(BaseConfig):
+    def __init__(self, nested_type_fabric: 'Callable[[], BaseConfig]'):
+        self._type_fabric = nested_type_fabric
+        self.objects = list()
+
+    def to_json(self):
+        return [_.to_json() for _ in self.objects]
+
+    def from_json(self, json_doc: dict, skip_unknown_fields=False):
+        if json_doc is not None:
+            assert isinstance(json_doc, list), 'ListConfigField can be constructed only from list'
+            self.objects = [self._type_fabric().from_json(_) for _ in json_doc]
+        return self
+
+    def verify(self, path_to_node: str = ''):
+        if not path_to_node:
+            path_to_node = '{}({}).'.format(self.__class__.__name__, self._type_fabric.__class__.name)
+        for idx, obj in enumerate(self.objects):
+            obj.verify('{}[{}].'.format(path_to_node, idx))
+
+
+class MetaConfig(abc.ABCMeta):
     def __new__(mcs, name, bases, nmspc):
         fields = {}
         for attr_name, attr_value in nmspc.items():
@@ -48,7 +72,7 @@ class MetaConfig(type):
         return obj
 
 
-class Config(BaseConfig, BaseConfigOps, metaclass=MetaConfig):
+class Config(BaseConfig, metaclass=MetaConfig):
     _fields = {}
 
     @classmethod
@@ -66,9 +90,9 @@ class Config(BaseConfig, BaseConfigOps, metaclass=MetaConfig):
                 if skip_unknown_fields:
                     continue
                 raise UnknownField('Found unknown field "{}"'.format(k))
-            if issubclass(field.type, BaseConfigOps):
+            if issubclass(field.type, BaseConfig):
                 getattr(self, k).from_json(v, skip_unknown_fields)
-            elif isinstance(v, field.type):
+            elif isinstance(v, field.type) or (not field.required and v is None):
                 setattr(self, k, v)
             else:
                 raise IncorrectFieldType(
@@ -80,20 +104,26 @@ class Config(BaseConfig, BaseConfigOps, metaclass=MetaConfig):
         result = {}
         for k, field in self._fields.items():
             attr_value = getattr(self, k)
-            result[k] = attr_value.to_json() if issubclass(field.type, Config) else attr_value
+            result[k] = attr_value.to_json() if issubclass(field.type, BaseConfig) else attr_value
         return result
 
-    def verify(self):
+    def verify(self, path_to_node: str = ''):
+        if not path_to_node:
+            path_to_node = self.__class__.__name__ + '.'
         for name, field in self._fields.items():
             if not hasattr(self, name):
-                raise AttributeError('Not found attribute {}'.format(name))
+                raise AttributeError('Not found attribute {}{}'.format(path_to_node, name))
             value = getattr(self, name)
             type_mismatch = not isinstance(value, field.type)
             if not field.required:
                 if type_mismatch and value is not None:
                     raise AttributeError(
-                        'Value for attribute {} should be None or of type {}, not {}'.format(name, field.type.__name__,
-                                                                                             value.__class__.__name__))
+                        'Value for attribute {}{} should be None or of type {}, not {}'.format(
+                            path_to_node, name, field.type.__name__, value.__class__.__name__
+                        ))
+
             else:
                 if type_mismatch:
-                    raise AttributeError('Value for attribute {} is required'.format(name))
+                    raise AttributeError('Value for attribute {}{} is required'.format(path_to_node, name))
+            if isinstance(value, BaseConfig):
+                value.verify('{}{}.'.format(path_to_node, name))

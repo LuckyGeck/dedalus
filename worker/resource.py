@@ -1,11 +1,12 @@
 import abc
 
-from util.plugins import PluginBase, PluginsMaster
+from common.models.resource import ResourceInfo
 from util.config import Config
+from util.plugins import PluginBase, PluginsMaster
 
 
 class ResourceNonInstallableError(Exception):
-    def __init__(self, resource_type: str, resource_config):
+    def __init__(self, resource_type: str, resource_config) -> None:
         self.resource_type = resource_type
         self.resource_config = resource_config
 
@@ -14,8 +15,9 @@ class ResourceNonInstallableError(Exception):
 
 
 class Resource(PluginBase, metaclass=abc.ABCMeta):
-    def __init__(self, config: dict = None, **kwargs):
+    def __init__(self, config: dict = None, **kwargs) -> None:
         assert config is None or not kwargs, 'Only one of config and kwargs should be set'
+        self.config = self.config_class()
         self.config.from_json(kwargs if config is None else config)
         self.config.verify()
 
@@ -27,10 +29,10 @@ class Resource(PluginBase, metaclass=abc.ABCMeta):
         if not self.is_installed:
             self.force_install()
 
-    @property
+    @classmethod
     @abc.abstractmethod
-    def config(self) -> Config:
-        pass
+    def config_class(cls) -> Config:
+        return Config()
 
     @property
     @abc.abstractmethod
@@ -45,3 +47,6 @@ class Resource(PluginBase, metaclass=abc.ABCMeta):
 
 class Resources(PluginsMaster):
     plugin_base_class = Resource
+
+    def construct_resource(self, resource_info: ResourceInfo) -> Resource:
+        return self.find_plugin(resource_info.name, resource_info.min_version)(resource_info.config)

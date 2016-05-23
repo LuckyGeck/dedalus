@@ -1,9 +1,9 @@
 import os
 
-from util.symver import SymVer
 from util.config import Config, ConfigField
-from worker.resource import Resource
 from util.filehash import get_file_hash
+from util.symver import SymVer
+from worker.resource import Resource
 
 
 class LocalFileResourceConfig(Config):
@@ -13,7 +13,7 @@ class LocalFileResourceConfig(Config):
 class LocalFileResource(Resource):
     name = 'local_file'
     version = SymVer(0, 0, 1)
-    config = LocalFileResourceConfig()
+    config_class = LocalFileResourceConfig
 
     @property
     def get_local_version(self) -> str:

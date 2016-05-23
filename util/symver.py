@@ -1,4 +1,10 @@
-class SymVer:
+from functools import total_ordering
+import numbers
+from util.config import BaseConfig, IncorrectFieldType, IncorrectFieldFormat
+
+
+@total_ordering
+class SymVer(BaseConfig):
     def __init__(self, major=0, minor=0, patch=0):
         if isinstance(major, int) and isinstance(minor, int) and isinstance(patch, int):
             self.version = (major, minor, patch)
@@ -10,3 +16,18 @@ class SymVer:
 
     def __lt__(self, other):
         return self.version < other.version
+
+    def to_json(self):
+        return repr(self)
+
+    def from_json(self, json_doc: str, skip_unknown_fields=False):
+        if not isinstance(json_doc, str):
+            raise IncorrectFieldType(
+                'SymVer can be constructed only from str - {} passed.'.format(json_doc.__class__.__name__)
+            )
+        parts = json_doc.lstrip('v').split('.')
+        if len(parts) != 3 or not all(x.isdigit() for x in parts):
+            raise IncorrectFieldFormat(
+                'SymVer field have vN.N.N format - got {}'.format(json_doc)
+            )
+        self.version = tuple(int(x) for x in parts)

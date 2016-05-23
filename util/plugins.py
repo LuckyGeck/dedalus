@@ -28,7 +28,7 @@ class PluginBase(metaclass=abc.ABCMeta):
 
 
 class PluginsMaster(metaclass=abc.ABCMeta):
-    def __init__(self, plugins_folder: str = None):
+    def __init__(self, plugins_folder: str = None) -> None:
         assert issubclass(self.plugin_base_class, PluginBase), \
             '{}.plugin_base_class should be a subclass of PluginBase class'.format(self.__class__.__name__)
         self.plugins = dict()
@@ -50,7 +50,7 @@ class PluginsMaster(metaclass=abc.ABCMeta):
                                                                        join(folder, module_name)))
                 self.plugins.setdefault(plugin.name, dict())[plugin.version] = plugin
 
-    def find_plugin(self, name: str, needed_version: SymVer):
+    def find_plugin(self, name: str, needed_version: SymVer) -> plugin_base_class:
         if name not in self.plugins:
             raise PluginWithNameNotFound()
         # TODO(luckygeck) implement more version restrictions

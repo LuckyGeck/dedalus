@@ -1,0 +1,17 @@
+{
+    "task_resources": [
+        {
+            "name": "local_file",
+            "config": {
+                "local_path": "/dev/urandom"
+            }
+        }
+    ],
+    "task_executor": {
+        "name": "shell",
+        "config": {
+            "shell_bin": "zsh",
+            "shell_script": "echo $(date); sleep 1; echo $(date); sleep 1; echo $(date) >> /dev/stderr; sleep 1; echo $(date) >> /dev/stderr; sleep 1; exit 0; "
+        }
+    }
+}

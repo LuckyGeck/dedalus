@@ -1,11 +1,10 @@
 import os
-
 from urllib.request import urlretrieve
 
-from util.symver import SymVer
 from util.config import Config, ConfigField
-from worker.resource import Resource
 from util.filehash import get_file_hash
+from util.symver import SymVer
+from worker.resource import Resource
 
 
 class RemoteFileResourceConfig(Config):
@@ -17,7 +16,7 @@ class RemoteFileResourceConfig(Config):
 class RemoteFileResource(Resource):
     name = 'remote_file'
     version = SymVer(0, 0, 1)
-    config = RemoteFileResourceConfig()
+    config_class = RemoteFileResourceConfig
 
     @property
     def get_local_version(self) -> str:

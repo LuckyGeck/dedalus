@@ -6,9 +6,9 @@ from concurrent.futures import ThreadPoolExecutor
 from typing import Iterable, Tuple
 
 from aiohttp import web
+from common.api_config import CommonApiConfig
 from common.exceptions import BackendError, BackendNetworkError, AppError
 from util.enum import Enum
-from common.api_config import CommonApiConfig
 
 
 class ErrorCode(metaclass=Enum):
@@ -33,16 +33,21 @@ class AppResponse(metaclass=abc.ABCMeta):
     def status(self):
         pass
 
+    @property
+    def code(self):
+        return 200
+
     def to_dict(self):
         return {'status': self.status, 'payload': self.payload}
 
 
-class AppOk(AppResponse):
+class ResultOk(AppResponse):
     status = 'ok'
 
 
-class AppError(AppResponse):
+class ResultError(AppResponse):
     status = 'error'
+    code = 500
 
 
 def json_response(*args, **kwargs):
@@ -87,25 +92,25 @@ class CommonApi(metaclass=abc.ABCMeta):
             if request.method == 'GET':
                 # duplicate items will be lost
                 args = dict(request.GET.items())
-
-            if request.method == 'POST':
+            else:
                 args = await request.json() if request.has_body else {}
-
-            result = await self.loop.run_in_executor(self.executor, func, args)
+            result = await self.loop.run_in_executor(self.executor, func, args, request)
 
         except BackendNetworkError as e:
             self.logger.error('Backend network error: %s', e)
-            result = AppError(code=ErrorCode.backend_network_error, reason=str(e))
-
+            result = ResultError(code=ErrorCode.backend_network_error, reason=str(e))
         except BackendError as e:
             self.logger.error('Backend error: %s', e)
-            result = AppError(code=ErrorCode.backend_error, reason=str(e))
-
+            result = ResultError(code=ErrorCode.backend_error, reason=str(e))
         except AppError as e:
             self.logger.error('App error: %s', e)
-            result = AppError(code=ErrorCode.app_error, reason=str(e))
+            result = ResultError(code=ErrorCode.app_error, reason=str(e))
+        except Exception as e:
+            raise
+            self.logger.error('Exception [%s]: %s', e.__class__.__name__, e)
+            result = ResultError(code=ErrorCode.app_error, reason=str(e))
 
-        return json_response(result.to_dict())
+        return json_response(result.to_dict(), status=result.code)
 
     def to(self, action):
         # converted to coroutine automatically

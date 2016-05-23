@@ -1,8 +1,9 @@
-from util.symver import SymVer
-from util.config import Config, ConfigField
-from worker.resource import Resource
-from plumbum import local
 import platform
+
+from plumbum import local
+from util.config import Config, ConfigField
+from util.symver import SymVer
+from worker.resource import Resource
 
 cat = local['cat']
 cat.cwd = 'worker/tests'
@@ -38,7 +39,7 @@ class SystemPackageResourceConfig(Config):
 class SystemPackageResource(Resource):
     name = 'system_package'
     version = SymVer(0, 0, 1)
-    config = SystemPackageResourceConfig()
+    config_class = SystemPackageResourceConfig
 
     @property
     def get_local_version(self) -> str:
