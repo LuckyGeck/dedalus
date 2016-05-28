@@ -6,15 +6,15 @@ from worker.executor import ExecutionEnded, Executors
 from worker.resource import Resources
 
 
-class Task(Thread):
+class TaskExecution(Thread):
     def __init__(self, task_id: str, backend: WorkerBackend,
                  resources: Resources, executors: Executors) -> None:
         super().__init__()
         self.task_id = task_id
         self.backend = backend
         task_info = self.backend.read_task_info(task_id)
-        self.resources = [resources.construct_resource(_) for _ in task_info.task_resources.objects]
-        self.executor = executors.construct_executor(self.task_id, task_info.task_executor)
+        self.resources = [resources.construct_resource(_) for _ in task_info.structure.task_resources]
+        self.executor = executors.construct_executor(self.task_id, task_info.structure.task_executor)
         self.user_stop = Event()
 
     def get_task_state(self):
@@ -89,8 +89,11 @@ class Engine:
         self.resources = resources
         self.executors = executors
 
-    def create_idle_task(self, task_id: str, task_config: dict):
-        return self.backend.save_task_info(task_id, TaskInfo.create(task_config))
+    def create_idle_task(self, task_id: str, task_struct: dict):
+        return self.backend.save_task_info(task_id, TaskInfo.create({
+            'task_id': task_id,
+            'structure': task_struct
+        }))
 
     def set_task_state(self, task_id: str, state: str) -> str:
         if task_id not in self.tasks:
@@ -100,5 +103,5 @@ class Engine:
                 self.backend.save_task_info(task_id, task_info)
                 return old_state.name
             # TODO: remove non-running tasks from self.tasks
-            self.tasks[task_id] = Task(task_id, self.backend, self.resources, self.executors)
+            self.tasks[task_id] = TaskExecution(task_id, self.backend, self.resources, self.executors)
         return self.tasks[task_id].set_state(state).name

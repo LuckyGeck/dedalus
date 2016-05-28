@@ -12,7 +12,7 @@ class TaskNotFound(Exception):
         self.task_id = task_id
 
     def __str__(self):
-        return 'Task "{}" not found in backend'.format(self.task_id)
+        return 'TaskExecution "{}" not found in backend'.format(self.task_id)
 
 
 class WorkerBackend(PluginBase, metaclass=abc.ABCMeta):
@@ -49,7 +49,7 @@ class WorkerBackend(PluginBase, metaclass=abc.ABCMeta):
         """
         Receive task state from backend.
         :raises if task is not found
-        :param task_id: Task's id
+        :param task_id: TaskExecution's id
         :return: Current task state
         """
         return self.read_task_info(task_id).exec_stats.state
@@ -58,7 +58,7 @@ class WorkerBackend(PluginBase, metaclass=abc.ABCMeta):
         """
         Changes task state and save it to backend.
         :raises if task is not found
-        :param task_id: Task's id to change state for
+        :param task_id: TaskExecution's id to change state for
         :param state: New state for a task
         :return: Previous task state
         """

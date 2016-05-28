@@ -31,8 +31,8 @@ class WorkerApp:
         return ResultOk('pong')
 
     def create_task(self, args: dict, request: Request):
-        task_id = args['task_id'] = uuid4().hex
-        self.engine.create_idle_task(task_id, task_config=args)
+        task_id = uuid4().hex
+        self.engine.create_idle_task(task_id, task_struct=args)
         return ResultOk({'task_id': task_id})
 
     def get_task_info(self, args: dict, request: Request):

@@ -1,4 +1,5 @@
 import datetime
+from typing import Optional
 
 from common.models.executor import ExecutorInfo
 from common.models.resource import ResourceInfo
@@ -11,7 +12,7 @@ class ForbiddenStateChange(Exception):
         self.to_state = to_state
 
     def __str__(self):
-        return 'Task state change from \'{}\' is only allowed to {} (tried to \'{}\')'.format(
+        return 'TaskExecution state change from \'{}\' is only allowed to {} (tried to \'{}\')'.format(
             self.from_state, TaskState.links[self.from_state], self.to_state)
 
 
@@ -161,8 +162,12 @@ class TaskExecutionInfo(Config):
         self.state.change_state(TaskState.stopped if is_initiated_by_user else TaskState.finished)
 
 
-class TaskInfo(Config):
-    task_id = ConfigField(type=str, required=False, default=None)
+class TaskStruct(Config):
     task_resources = ListConfigField(ResourceInfo)
     task_executor = ExecutorInfo()
+
+
+class TaskInfo(Config):
+    task_id = ConfigField(type=str, required=False, default=None)
+    structure = TaskStruct()
     exec_stats = TaskExecutionInfo()
