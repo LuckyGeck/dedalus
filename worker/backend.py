@@ -34,18 +34,18 @@ class WorkerBackend(PluginBase, metaclass=abc.ABCMeta):
         pass
 
     @abc.abstractmethod
-    def save_task_info(self, task_id: str, task_info: TaskInfo):
+    def write_task_info(self, task_id: str, task_info: TaskInfo):
         """Create or replace task by task_id"""
         pass
 
     @abc.abstractmethod
     def list_tasks(self, with_info: bool = False) -> Iterator[Tuple[str, Optional[TaskInfo]]]:
         """List all known tasks.
-        :returns iterator over pairs of task_id and task_info. If with_info is not set, all task_info's are None
+        :returns iterator over pairs of task_id and task_info. If with_info is not set, all task_infos are None
         """
         pass
 
-    def get_task_state(self, task_id: str) -> TaskState:
+    def read_task_state(self, task_id: str) -> TaskState:
         """
         Receive task state from backend.
         :raises if task is not found
@@ -54,7 +54,7 @@ class WorkerBackend(PluginBase, metaclass=abc.ABCMeta):
         """
         return self.read_task_info(task_id).exec_stats.state
 
-    def set_task_state(self, task_id: str, state: str) -> TaskState:
+    def write_task_state(self, task_id: str, state: str) -> TaskState:
         """
         Changes task state and save it to backend.
         :raises if task is not found
@@ -64,7 +64,7 @@ class WorkerBackend(PluginBase, metaclass=abc.ABCMeta):
         """
         task_info = self.read_task_info(task_id)
         old_state = task_info.exec_stats.name.change_state(state, force=False)
-        self.save_task_info(task_id, task_info)
+        self.write_task_info(task_id, task_info)
         return old_state
 
 

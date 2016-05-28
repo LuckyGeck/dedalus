@@ -1,9 +1,8 @@
-import datetime
 from typing import Optional
 
 from common.models.executor import ExecutorInfo
 from common.models.resource import ResourceInfo
-from util.config import Config, ConfigField, BaseConfig, IncorrectFieldType, ListConfigField
+from util.config import Config, ConfigField, BaseConfig, IncorrectFieldType, ListConfigField, DateTimeField
 
 
 class ForbiddenStateChange(Exception):
@@ -94,39 +93,6 @@ class TaskReturnCode(BaseConfig):
 
     def verify(self, path_to_node: str = ''):
         assert isinstance(self._retcode, int) or self._retcode is None
-
-
-class DateTimeField(BaseConfig):
-    def __init__(self, unixtime: int = None):
-        self._dt = None if unixtime is None else self.unixtime_to_datetime(unixtime)
-
-    @staticmethod
-    def datetime_to_unixtime(dt: datetime.datetime) -> int:
-        return (dt - datetime.datetime(1970, 1, 1)).total_seconds()
-
-    @staticmethod
-    def unixtime_to_datetime(unixtime: 'Optional[int, float]') -> datetime.datetime:
-        return datetime.datetime.fromtimestamp(int(unixtime))
-
-    def set_to_now(self):
-        self._dt = datetime.datetime.utcnow()
-
-    def to_json(self):
-        return self.datetime_to_unixtime(self._dt) if self._dt else None
-
-    def from_json(self, json_doc: int, skip_unknown_fields=False):
-        if json_doc is None:
-            self._dt = None
-            return
-        if not isinstance(json_doc, int) and not isinstance(json_doc, float):
-            raise IncorrectFieldType(
-                'DateTimeField can be constructed only from int or float- {} passed.'.format(
-                    json_doc.__class__.__name__))
-        self._dt = self.unixtime_to_datetime(json_doc)
-        return self
-
-    def verify(self, path_to_node: str = ''):
-        assert isinstance(self._dt, datetime.datetime) or self._dt is None
 
 
 class TaskExecutionInfo(Config):

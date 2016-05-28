@@ -1,5 +1,6 @@
 import abc
-from typing import NamedTuple, Callable
+import datetime
+from typing import NamedTuple, Callable, Optional
 
 ConfigField = NamedTuple('ConfigField', [('type', type), ('required', bool), ('default', None)])
 
@@ -37,11 +38,11 @@ class ListConfigField(BaseConfig, list):
     def to_json(self):
         return [_.to_json() for _ in self]
 
-    def from_json(self, json_doc: dict, skip_unknown_fields=False):
-        if json_doc is not None:
-            assert isinstance(json_doc, list), 'ListConfigField can be constructed only from list'
+    def from_json(self, json_list: dict, skip_unknown_fields=False):
+        if json_list is not None:
+            assert isinstance(json_list, list), 'ListConfigField can be constructed only from list'
             self.clear()
-            self.extend(self._type_fabric().from_json(_) for _ in json_doc)
+            self.extend(self._type_fabric().from_json(_) for _ in json_list)
         return self
 
     def verify(self, path_to_node: str = ''):
@@ -59,11 +60,11 @@ class DictConfigField(BaseConfig, dict):
     def to_json(self):
         return {k: v.to_json() for k, v in self.items()}
 
-    def from_json(self, json_doc: dict, skip_unknown_fields=False):
-        if json_doc is not None:
-            assert isinstance(json_doc, dict), 'DictConfigField can be constructed only from dict'
+    def from_json(self, json_map: dict, skip_unknown_fields=False):
+        if json_map is not None:
+            assert isinstance(json_map, dict), 'DictConfigField can be constructed only from dict'
             self.clear()
-            self.update({k: self._type_fabric().from_json(v) for k, v in json_doc.items()})
+            self.update({k: self._type_fabric().from_json(v) for k, v in json_map.items()})
         return self
 
     def verify(self, path_to_node: str = ''):
@@ -71,6 +72,39 @@ class DictConfigField(BaseConfig, dict):
             path_to_node = '{}(str, {}).'.format(self.__class__.__name__, self._type_fabric.__class__.name)
         for k, v in self.items():
             v.verify('{}[\'{}\'].'.format(path_to_node, k))
+
+
+class DateTimeField(BaseConfig):
+    def __init__(self, unixtime: int = None):
+        self._dt = None if unixtime is None else self.unixtime_to_datetime(unixtime)
+
+    @staticmethod
+    def datetime_to_unixtime(dt: datetime.datetime) -> int:
+        return (dt - datetime.datetime(1970, 1, 1)).total_seconds()
+
+    @staticmethod
+    def unixtime_to_datetime(unixtime: 'Optional[int, float]') -> datetime.datetime:
+        return datetime.datetime.fromtimestamp(int(unixtime))
+
+    def set_to_now(self):
+        self._dt = datetime.datetime.utcnow()
+
+    def to_json(self):
+        return self.datetime_to_unixtime(self._dt) if self._dt else None
+
+    def from_json(self, unixtime: int, skip_unknown_fields=False):
+        if unixtime is None:
+            self._dt = None
+            return
+        if not isinstance(unixtime, int) and not isinstance(unixtime, float):
+            raise IncorrectFieldType(
+                'DateTimeField can be constructed only from int or float- {} passed.'.format(
+                    unixtime.__class__.__name__))
+        self._dt = self.unixtime_to_datetime(unixtime)
+        return self
+
+    def verify(self, path_to_node: str = ''):
+        assert isinstance(self._dt, datetime.datetime) or self._dt is None
 
 
 class MetaConfig(abc.ABCMeta):

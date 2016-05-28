@@ -7,7 +7,7 @@ class PluginsConfig(Config):
 
 
 class MasterConfig(Config):
-    api = CommonApiConfig(common_logger='dedalus.api.common', access_logger='dedalus.api.access')
+    api = CommonApiConfig(common_logger='dedalus.master.api.common', access_logger='dedalus.master.api.access')
     backend = ConfigField(type=str, required=True, default='leveldb')
     backend_config = ConfigField(type=dict, required=True, default=dict())
     plugins = PluginsConfig()

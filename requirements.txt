@@ -1,3 +1,4 @@
 aiohttp==0.21.5
 plumbum==1.6.1.post0
 leveldb==0.193
+crontab==0.21.3
