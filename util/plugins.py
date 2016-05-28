@@ -8,11 +8,20 @@ from util.symver import SymVer
 
 
 class PluginWithNameNotFound(Exception):
-    pass
+    def __init__(self, name: str):
+        self.plugin_name = name
+
+    def __str__(self):
+        return 'Plugin with name \'{}\' not found!'.format(self.plugin_name)
 
 
 class PluginWithVersionNotFound(Exception):
-    pass
+    def __init__(self, name: str, version: SymVer):
+        self.plugin_name = name
+        self.plugin_version = version
+
+    def __str__(self):
+        return 'Plugin \'{}\' for version {} not found!'.format(self.plugin_name, self.plugin_version)
 
 
 class PluginBase(metaclass=abc.ABCMeta):
@@ -52,11 +61,13 @@ class PluginsMaster(metaclass=abc.ABCMeta):
 
     def find_plugin(self, name: str, needed_version: SymVer) -> plugin_base_class:
         if name not in self.plugins:
-            raise PluginWithNameNotFound()
+            raise PluginWithNameNotFound(name)
         # TODO(luckygeck) implement more version restrictions
         version, plugin = max(self.plugins[name].items(), key=lambda _: _[0])
         if version >= needed_version:
             return plugin
+        else:
+            raise PluginWithVersionNotFound(name, needed_version)
 
     @classmethod
     def _get_module_plugins(cls, module):
