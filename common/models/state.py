@@ -21,24 +21,27 @@ class StateMachine(BaseConfig):
     def links(self) -> 'Mapping[str, Set[str]]':
         pass
 
-    def __init__(self, state: str = idle):
+    def __init__(self, state: str = idle, **kwargs):
+        super().__init__(**kwargs)
         assert self.is_status(state), 'Unknown state: {}'.format(state)
         self._state = state
 
     def to_json(self):
         return self.name
 
-    def from_json(self, json_doc: str, skip_unknown_fields=False, path_to_node: str = ''):
-        path_to_node = self._prepare_path_to_node(path_to_node)
+    def from_json(self, json_doc: str, skip_unknown_fields=False):
         if not isinstance(json_doc, str) and json_doc is not None:
             raise IncorrectFieldType(
-                '{}: {} can be constructed only from str - {} passed.'.format(path_to_node, self.__class__.__name__,
+                '{}: {} can be constructed only from str - {} passed.'.format(self.path_to_node,
+                                                                              self.__class__.__name__,
                                                                               json_doc.__class__.__name__))
         self.change_state(json_doc, force=True)
         return self
 
-    def verify(self, path_to_node: str = ''):
-        assert self.is_status(self._state)
+    def verify(self):
+        assert self.is_status(self._state), \
+            '{}: {} should have valid state, but is set to \'{}\''.format(self.path_to_node, self.__class__.__name__,
+                                                                          self._state)
 
     @property
     def name(self) -> str:

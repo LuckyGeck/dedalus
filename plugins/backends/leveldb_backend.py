@@ -23,7 +23,7 @@ class WorkerLevelDBBackend(WorkerBackend):
     version = SymVer(0, 0, 1)
     config_class = WorkerLevelDBConfig
 
-    def __init__(self, backend_config: dict) -> None:
+    def __init__(self, backend_config: dict):
         super().__init__(backend_config)
         self.tasks_db = LevelDB(self.config.db_path)
 
@@ -43,7 +43,7 @@ class MasterLevelDBBackend(MasterBackend):
     version = SymVer(0, 0, 1)
     config_class = MasterLevelDBConfig
 
-    def __init__(self, backend_config: dict) -> None:
+    def __init__(self, backend_config: dict):
         super().__init__(backend_config)
         self.db = LevelDB(self.config.db_path)
         self.graphs = self.db.collection_view('graphs')

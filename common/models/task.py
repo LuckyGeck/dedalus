@@ -7,7 +7,8 @@ from util.config import Config, ConfigField, BaseConfig, IncorrectFieldType, Dat
 
 
 class TaskReturnCode(BaseConfig):
-    def __init__(self, retcode: int = None):
+    def __init__(self, retcode: int = None, **kwargs):
+        super().__init__(**kwargs)
         self._retcode = retcode
 
     @property
@@ -20,21 +21,22 @@ class TaskReturnCode(BaseConfig):
     def to_json(self):
         return self.retcode
 
-    def from_json(self, json_doc: int, skip_unknown_fields=False, path_to_node: str = ''):
-        path_to_node = self._prepare_path_to_node(path_to_node)
+    def from_json(self, json_doc: int, skip_unknown_fields=False):
         if not isinstance(json_doc, int) and json_doc is not None:
             raise IncorrectFieldType(
-                '{}: TaskReturnCode can be constructed only from int - {} passed.'.format(path_to_node,
+                '{}: TaskReturnCode can be constructed only from int - {} passed.'.format(self.path_to_node,
                                                                                           json_doc.__class__.__name__))
         self._retcode = json_doc
         return self
 
-    def verify(self, path_to_node: str = ''):
-        assert isinstance(self._retcode, int) or self._retcode is None
+    def verify(self):
+        assert isinstance(self._retcode, int) or self._retcode is None, \
+            '{}: Return code should be int or None, but it is {}'.format(self.path_to_node,
+                                                                         self._retcode.__class__.__name__)
 
 
 class TaskExecutionInfo(Config):
-    state = TaskState(TaskState.idle)
+    state = TaskState()
     retcode = TaskReturnCode()
 
     prep_start_time = DateTimeField()
