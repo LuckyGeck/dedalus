@@ -27,11 +27,12 @@ class ScheduledGraph(Config):
     last_triggered = DateTimeField(0)
     schedule_created = DateTimeField()
 
-    def __init__(self, graph_name: str, schedule: str):
-        super().__init__()
+    def init(self, graph_name: str, schedule: str):
         self.schedule.from_json(schedule)
         self.graph_name = graph_name
         self.schedule_created.set_to_now()
+        self.verify()
+        return self
 
     def should_be_triggered(self) -> bool:
         unix_now = DateTimeField.datetime_to_unixtime(datetime.datetime.utcnow())

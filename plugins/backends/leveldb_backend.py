@@ -96,7 +96,7 @@ class MasterLevelDBBackend(MasterBackend):
         return ScheduledGraph.create(self.schedule.get(graph_name))
 
     def write_schedule(self, graph_name: str, schedule: str):
-        schedule_json = ScheduledGraph(graph_name, schedule).to_json()
+        schedule_json = ScheduledGraph().init(graph_name, schedule).to_json()
         graph_versions = self.list_graph_struct(graph_name, with_info=False)
         if next(graph_versions, None) is None:
             raise GraphStructureNotFound(graph_name)

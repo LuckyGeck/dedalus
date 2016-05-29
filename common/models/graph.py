@@ -83,8 +83,3 @@ class GraphStruct(Config):
 class GraphInstanceInfo(Config):
     instance_id = ConfigField(type=str, required=True, default=None)
     structure = GraphStruct()
-
-    def __init__(self, instance_id: str, graph_structure: GraphStruct):
-        super().__init__()
-        self.instance_id = instance_id
-        self.structure = graph_structure
