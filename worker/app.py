@@ -92,7 +92,7 @@ class WorkerApi(CommonApi):
             ('GET', '/v1.0/tasks', 'list_tasks'),
             ('POST', '/v1.0/task/', 'create_task'),
             ('GET',  '/v1.0/task/{task_id}', 'get_task_info'),
-            ('GET',  '/v1.0/task/{task_id}/state', 'read_task_state'),
+            ('GET',  '/v1.0/task/{task_id}/state', 'get_task_state'),
             ('POST', '/v1.0/task/{task_id}/start', 'start_task'),
             ('POST', '/v1.0/task/{task_id}/stop', 'stop_task'),
         ]
