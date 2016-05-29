@@ -45,7 +45,7 @@ class ExtendedTaskList(create_list_field_type(ExtendedTaskStruct)):
             path_to_node = '{}.'.format(self.__class__.__name__, self._type_fabric.__class__.__name__)
         super().verify(path_to_node)
         assert all(isinstance(_, ExtendedTaskStruct) for _ in self)
-        dups = [(k, v) for k, v in Counter(_.task.task_id for _ in self).items() if v > 1]
+        dups = [(k, v) for k, v in Counter(_.task_name for _ in self).items() if v > 1]
         if dups:
             raise DuplicateTasksFound(dups)
         needed_clusters = set(chain.from_iterable(_.hosts for _ in self))
@@ -65,7 +65,8 @@ class TaskDependencies(create_dict_field_type(StrListConfigField)):
         value_tasks = set(chain.from_iterable(self.values()))
         key_tasks = set(self.keys())
         all_tasks = set(_.task_name for _ in self.tasks)
-        not_found_tasks = (key_tasks - all_tasks) + (value_tasks - all_tasks)
+        not_found_tasks = key_tasks - all_tasks
+        not_found_tasks.update(value_tasks - all_tasks)
         if not_found_tasks:
             raise UnknownTasksInDeps(not_found_tasks)
 
@@ -74,7 +75,7 @@ class GraphStruct(Config):
     graph_name = ConfigField(type=str, required=True, default='graph00')
     revision = ConfigField(type=int, required=True, default=0)
 
-    clusters = create_dict_field_type(StrListConfigField)
+    clusters = create_dict_field_type(StrListConfigField)()
     tasks = ExtendedTaskList(clusters)
     deps = TaskDependencies(tasks)
 
