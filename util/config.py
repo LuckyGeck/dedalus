@@ -1,6 +1,8 @@
 import abc
 import datetime
-from typing import NamedTuple, Callable, Optional
+from typing import NamedTuple, Callable, Optional, TypeVar, List, Union
+
+T = TypeVar('T')
 
 ConfigField = NamedTuple('ConfigField', [('type', type), ('required', bool), ('default', None)])
 
@@ -19,7 +21,7 @@ class IncorrectFieldFormat(Exception):
 
 class BaseConfig(metaclass=abc.ABCMeta):
     @abc.abstractmethod
-    def from_json(self, json_doc: dict, skip_unknown_fields=False):
+    def from_json(self, json_doc: dict, skip_unknown_fields=False, path_to_node: str = ''):
         pass
 
     @abc.abstractmethod
@@ -29,49 +31,103 @@ class BaseConfig(metaclass=abc.ABCMeta):
     def verify(self, path_to_node: str = ''):
         pass
 
-
-class ListConfigField(BaseConfig, list):
-    def __init__(self, nested_type_fabric: 'Callable[[], BaseConfig]'):
-        super().__init__()
-        self._type_fabric = nested_type_fabric
-
-    def to_json(self):
-        return [_.to_json() for _ in self]
-
-    def from_json(self, json_list: dict, skip_unknown_fields=False):
-        if json_list is not None:
-            assert isinstance(json_list, list), 'ListConfigField can be constructed only from list'
-            self.clear()
-            self.extend(self._type_fabric().from_json(_) for _ in json_list)
-        return self
-
-    def verify(self, path_to_node: str = ''):
-        if not path_to_node:
-            path_to_node = '{}({}).'.format(self.__class__.__name__, self._type_fabric.__class__.name)
-        for idx, obj in enumerate(self):
-            obj.verify('{}[{}].'.format(path_to_node, idx))
+    def _prepare_path_to_node(self, path_to_node):
+        return self.__class__.__name__ + '.' if not path_to_node else path_to_node
 
 
-class DictConfigField(BaseConfig, dict):
-    def __init__(self, nested_type_fabric: 'Callable[[], BaseConfig]'):
-        super().__init__()
-        self._type_fabric = nested_type_fabric
+def create_list_field_type(type_t: Callable[[], Union[BaseConfig, T]]) -> Callable[[], Union[BaseConfig, list]]:
+    class ListConfigFieldBase(BaseConfig, list):
+        _type_fabric = type_t
 
-    def to_json(self):
-        return {k: v.to_json() for k, v in self.items()}
+        def _prepare_path_to_node(self, path_to_node):
+            return 'ListConfigField({})'.format(
+                self._type_fabric.__name__) if not path_to_node else path_to_node.rstrip('.')
 
-    def from_json(self, json_map: dict, skip_unknown_fields=False):
-        if json_map is not None:
-            assert isinstance(json_map, dict), 'DictConfigField can be constructed only from dict'
-            self.clear()
-            self.update({k: self._type_fabric().from_json(v) for k, v in json_map.items()})
-        return self
+        def _verify_plain_type(self, idx, data, path_to_node: str = ''):
+            if isinstance(data, self._type_fabric):
+                return data
+            else:
+                raise IncorrectFieldType('Field {}[{}] should have type {}, but {} passed'.format(
+                    path_to_node, idx, self._type_fabric.__name__, data.__class__.__name__
+                ))
 
-    def verify(self, path_to_node: str = ''):
-        if not path_to_node:
-            path_to_node = '{}(str, {}).'.format(self.__class__.__name__, self._type_fabric.__class__.name)
-        for k, v in self.items():
-            v.verify('{}[\'{}\'].'.format(path_to_node, k))
+        def to_json(self):
+            if issubclass(self._type_fabric, BaseConfig):
+                return [_.to_json() for _ in self]
+            else:
+                return self[::]
+
+        def from_json(self, json_list: list, skip_unknown_fields=False, path_to_node: str = ''):
+            path_to_node = self._prepare_path_to_node(path_to_node)
+            if json_list is not None:
+                assert isinstance(json_list, list), \
+                    '{}: ListConfigField can be constructed only from list'.format(path_to_node)
+                self.clear()
+                if issubclass(self._type_fabric, BaseConfig):
+                    self.extend(
+                        self._type_fabric().from_json(_, skip_unknown_fields, '{}[{}].'.format(path_to_node, idx))
+                        for idx, _ in enumerate(json_list)
+                    )
+                else:
+                    self.extend(self._verify_plain_type(idx, _, path_to_node) for idx, _ in enumerate(json_list))
+            return self
+
+        def verify(self, path_to_node: str = ''):
+            path_to_node = self._prepare_path_to_node(path_to_node)
+            if issubclass(self._type_fabric, BaseConfig):
+                for idx, obj in enumerate(self):
+                    obj.verify('{}[{}].'.format(path_to_node, idx))
+            else:
+                for idx, obj in enumerate(self):
+                    assert isinstance(obj, self._type_fabric), 'Field {}[{}] should have type {}, but {} passed'.format(
+                        path_to_node, idx, self._type_fabric.__name__, obj.__class__.__name__
+                    )
+
+    return ListConfigFieldBase
+
+
+StrListConfigField = create_list_field_type(str)
+
+
+def create_dict_field_type(type_t: Callable[[], T]) -> Callable[[], Union[BaseConfig, dict]]:
+    class DictConfigFieldBase(BaseConfig, dict):
+        _type_fabric = type_t
+
+        def _prepare_path_to_node(self, path_to_node):
+            return 'DictConfigField(str, {})'.format(
+                self._type_fabric.__name__) if not path_to_node else path_to_node.rstrip('.')
+
+        def _verify_plain_type(self, idx, data, path_to_node: str = ''):
+            if isinstance(data, self._type_fabric):
+                return data
+            else:
+                raise IncorrectFieldType('Field {}[\'{}\'] should have type {}, but {} passed'.format(
+                    path_to_node, idx, self._type_fabric.__name__, data.__class__.__name__
+                ))
+
+        def to_json(self):
+            return {k: v.to_json() for k, v in self.items()}
+
+        def from_json(self, json_map: dict, skip_unknown_fields=False, path_to_node: str = ''):
+            path_to_node = self._prepare_path_to_node(path_to_node)
+            if json_map is not None:
+                assert isinstance(json_map, dict), '{}: create_dict_field_type can be constructed only from dict'.format(
+                    path_to_node)
+                self.clear()
+                if issubclass(self._type_fabric, BaseConfig):
+                    self.update(
+                        {k: self._type_fabric().from_json(v, skip_unknown_fields, '{}[\'{}\'].'.format(path_to_node, k))
+                         for k, v in json_map.items()}
+                    )
+                else:
+                    self.update({k: self._verify_plain_type(k, v, path_to_node) for k, v in json_map.items()})
+            return self
+
+        def verify(self, path_to_node: str = ''):
+            path_to_node = self._prepare_path_to_node(path_to_node)
+            for k, v in self.items():
+                v.verify('{}[\'{}\'].'.format(path_to_node, k))
+    return DictConfigFieldBase
 
 
 class DateTimeField(BaseConfig):
@@ -92,19 +148,23 @@ class DateTimeField(BaseConfig):
     def to_json(self):
         return self.datetime_to_unixtime(self._dt) if self._dt else None
 
-    def from_json(self, unixtime: int, skip_unknown_fields=False):
+    def from_json(self, unixtime: int, skip_unknown_fields=False, path_to_node: str = ''):
+        path_to_node = self._prepare_path_to_node(path_to_node)
         if unixtime is None:
             self._dt = None
             return
         if not isinstance(unixtime, int) and not isinstance(unixtime, float):
             raise IncorrectFieldType(
-                'DateTimeField can be constructed only from int or float- {} passed.'.format(
-                    unixtime.__class__.__name__))
+                '{}: DateTimeField can be constructed only from int or float - {} passed.'.format(
+                    path_to_node, unixtime.__class__.__name__)
+            )
         self._dt = self.unixtime_to_datetime(unixtime)
         return self
 
     def verify(self, path_to_node: str = ''):
-        assert isinstance(self._dt, datetime.datetime) or self._dt is None
+        path_to_node = self._prepare_path_to_node(path_to_node)
+        assert isinstance(self._dt, datetime.datetime) or self._dt is None, \
+            'Value of {} should be either datetime or None'.format(path_to_node)
 
 
 class MetaConfig(abc.ABCMeta):
@@ -140,21 +200,22 @@ class Config(BaseConfig, metaclass=MetaConfig):
             result.verify()
         return result
 
-    def from_json(self, json_doc: dict, skip_unknown_fields=False):
+    def from_json(self, json_doc: dict, skip_unknown_fields=False, path_to_node: str = ''):
+        path_to_node = self._prepare_path_to_node(path_to_node)
         for k, v in json_doc.items():
             field = self._fields.get(k, None)
             if field is None:
                 if skip_unknown_fields:
                     continue
-                raise UnknownField('Found unknown field "{}"'.format(k))
+                raise UnknownField('{}: Found unknown field "{}"'.format(path_to_node, k))
             if issubclass(field.type, BaseConfig):
-                getattr(self, k).from_json(v, skip_unknown_fields)
+                getattr(self, k).from_json(v, skip_unknown_fields, '{}{}.'.format(path_to_node, k))
             elif isinstance(v, field.type) or (not field.required and v is None):
                 setattr(self, k, v)
             else:
                 raise IncorrectFieldType(
-                    'Field {} should have type {}, but {} passed.'.format(k, field.type.__name__,
-                                                                          v.__class__.__name__))
+                    'Field {}{} should have type {}, but {} passed.'.format(path_to_node, k, field.type.__name__,
+                                                                            v.__class__.__name__))
         return self
 
     def to_json(self):

@@ -1,8 +1,8 @@
 from typing import Optional
 
 from common.models.executor import ExecutorInfo
-from common.models.resource import ResourceInfo
-from util.config import Config, ConfigField, BaseConfig, IncorrectFieldType, ListConfigField, DateTimeField
+from common.models.resource import ResourceInfoList
+from util.config import Config, ConfigField, BaseConfig, IncorrectFieldType, DateTimeField
 
 
 class ForbiddenStateChange(Exception):
@@ -41,10 +41,12 @@ class TaskState(BaseConfig):
     def to_json(self):
         return self.name
 
-    def from_json(self, json_doc: str, skip_unknown_fields=False):
+    def from_json(self, json_doc: str, skip_unknown_fields=False, path_to_node: str = ''):
+        path_to_node = self._prepare_path_to_node(path_to_node)
         if not isinstance(json_doc, str) and json_doc is not None:
             raise IncorrectFieldType(
-                'TaskState can be constructed only from str - {} passed.'.format(json_doc.__class__.__name__))
+                '{}: TaskState can be constructed only from str - {} passed.'.format(path_to_node,
+                                                                                     json_doc.__class__.__name__))
         self.change_state(json_doc, force=True)
         return self
 
@@ -84,10 +86,12 @@ class TaskReturnCode(BaseConfig):
     def to_json(self):
         return self.retcode
 
-    def from_json(self, json_doc: int, skip_unknown_fields=False):
+    def from_json(self, json_doc: int, skip_unknown_fields=False, path_to_node: str = ''):
+        path_to_node = self._prepare_path_to_node(path_to_node)
         if not isinstance(json_doc, int) and json_doc is not None:
             raise IncorrectFieldType(
-                'TaskReturnCode can be constructed only from int - {} passed.'.format(json_doc.__class__.__name__))
+                '{}: TaskReturnCode can be constructed only from int - {} passed.'.format(path_to_node,
+                                                                                          json_doc.__class__.__name__))
         self._retcode = json_doc
         return self
 
@@ -129,7 +133,7 @@ class TaskExecutionInfo(Config):
 
 
 class TaskStruct(Config):
-    resources = ListConfigField(ResourceInfo)
+    resources = ResourceInfoList()
     executor = ExecutorInfo()
 
 

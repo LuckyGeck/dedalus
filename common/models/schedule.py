@@ -14,8 +14,9 @@ class ScheduleRule(BaseConfig, CronTab):
     def to_json(self):
         return str(self)
 
-    def from_json(self, rule_str: str, skip_unknown_fields=False):
-        assert isinstance(rule_str, str), 'ScheduleRule can be constructed only from str'
+    def from_json(self, rule_str: str, skip_unknown_fields=False, path_to_node: str = ''):
+        path_to_node = self._prepare_path_to_node(path_to_node)
+        assert isinstance(rule_str, str), '{}: ScheduleRule can be constructed only from str'.format(path_to_node)
         self.matchers = self._make_matchers(rule_str)
         self.crontab = rule_str
 

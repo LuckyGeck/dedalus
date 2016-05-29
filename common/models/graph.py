@@ -3,7 +3,7 @@ from collections import Counter
 from typing import List, Iterable, Tuple, Mapping
 
 from common.models.task import TaskStruct
-from util.config import Config, ConfigField, DictConfigField, ListConfigField
+from util.config import Config, ConfigField, create_dict_field_type, create_list_field_type, StrListConfigField
 
 
 class UnknownTasksInDeps(Exception):
@@ -33,17 +33,16 @@ class UnknownClusters(Exception):
 class ExtendedTaskStruct(Config):
     task_name = ConfigField(type=str, required=True, default=None)
     task = TaskStruct()
-    hosts = ListConfigField(ConfigField(type=str, required=True, default=None))
+    hosts = StrListConfigField()
 
 
-class ExtendedTaskList(ListConfigField):
+class ExtendedTaskList(create_list_field_type(ExtendedTaskStruct)):
     def __init__(self, clusters: 'Mapping[str, List[str]]'):
-        super().__init__(ExtendedTaskStruct)
         self.clusters = clusters
 
     def verify(self, path_to_node: str = ''):
         if not path_to_node:
-            path_to_node = '{}.'.format(self.__class__.__name__, self._type_fabric.__class__.name)
+            path_to_node = '{}.'.format(self.__class__.__name__, self._type_fabric.__class__.__name__)
         super().verify(path_to_node)
         assert all(isinstance(_, ExtendedTaskStruct) for _ in self)
         dups = [(k, v) for k, v in Counter(_.task.task_id for _ in self).items() if v > 1]
@@ -55,14 +54,13 @@ class ExtendedTaskList(ListConfigField):
             raise UnknownClusters(not_found_clusters)
 
 
-class TaskDependencies(DictConfigField):
+class TaskDependencies(create_dict_field_type(StrListConfigField)):
     def __init__(self, tasks: 'List[ExtendedTaskStruct]'):
-        super().__init__(lambda: ListConfigField(ConfigField(type=str, required=True, default=None)))
         self.tasks = tasks
 
     def verify(self, path_to_node: str = ''):
         if not path_to_node:
-            path_to_node = '{}.'.format(self.__class__.__name__, self._type_fabric.__class__.name)
+            path_to_node = '{}.'.format(self.__class__.__name__, self._type_fabric.__class__.__name__)
         super().verify(path_to_node)
         value_tasks = set(chain.from_iterable(self.values()))
         key_tasks = set(self.keys())
@@ -76,7 +74,7 @@ class GraphStruct(Config):
     graph_name = ConfigField(type=str, required=True, default='graph00')
     revision = ConfigField(type=int, required=True, default=0)
 
-    clusters = DictConfigField(lambda: ListConfigField(ConfigField(type=str, required=True, default=None)))
+    clusters = create_dict_field_type(StrListConfigField)
     tasks = ExtendedTaskList(clusters)
     deps = TaskDependencies(tasks)
 

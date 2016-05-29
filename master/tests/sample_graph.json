@@ -23,7 +23,7 @@
           }
         }
       },
-      "hosts": "I"
+      "hosts": ["I"]
     },
     {
       "task_name": "2",
@@ -32,7 +32,7 @@
           "name": "shell", "config": { "shell_script": "echo 2; date" }
         }
       },
-      "hosts": "II"
+      "hosts": ["II"]
     },
     {
       "task_name": "3",
@@ -41,7 +41,7 @@
           "name": "shell", "config": { "shell_script": "echo 3; date" }
         }
       },
-      "hosts": "II"
+      "hosts": ["I", "II"]
     }
   ],
   "deps": {

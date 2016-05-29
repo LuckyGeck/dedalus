@@ -44,7 +44,7 @@ class MasterApp:
         ])
 
     def create_graph(self, args: dict, request: Request):
-        graph_name = request.match_info.get('graph_name', None)
+        graph_name = request.match_info.get('graph_name', args.get('graph_name', None))
         if not graph_name:
             return ResultError(error='Graph name should be non-empty string')
         rev = self.engine.add_graph_struct(graph_name=graph_name, graph_struct=args)
@@ -84,6 +84,7 @@ class MasterApi(CommonApi):
             ('GET', '/ping', 'ping'),
             ('GET', '/v1.0/graphs', 'list_graphs'),
             ('POST', '/v1.0/graph', 'create_graph'),
+            ('POST', '/v1.0/graph/{graph_name}', 'create_graph'),
             ('POST', '/v1.0/graph/{graph_name}/{revision}/launch', 'launch_graph'),
             ('POST', '/v1.0/graph/{graph_name}/launch', 'launch_graph'),
             ('GET', '/v1.0/instances', 'list_instances'),
