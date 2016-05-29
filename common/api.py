@@ -4,6 +4,7 @@ import json
 import logging
 from concurrent.futures import ThreadPoolExecutor
 from typing import Iterable, Tuple
+import traceback
 
 from aiohttp import web
 from common.api_config import CommonApiConfig
@@ -106,9 +107,8 @@ class CommonApi(metaclass=abc.ABCMeta):
             self.logger.error('App error: %s', e)
             result = ResultError(code=ErrorCode.app_error, reason=str(e))
         except Exception as e:
-            self.logger.error('Exception [%s]: %s', e.__class__.__name__, e)
+            self.logger.error('Exception [%s]: %s; trace: %s', e.__class__.__name__, e, traceback.format_exc())
             result = ResultError(code=ErrorCode.app_error, exception=e.__class__.__name__, reason=str(e))
-
         return json_response(result.to_dict(), status=result.code)
 
     def to(self, action):
