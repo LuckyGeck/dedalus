@@ -63,8 +63,10 @@ class MasterLevelDBBackend(MasterBackend):
     def read_graph_struct(self, graph_name: str, revision: int = -1) -> GraphStruct:
         graph_view = self.graphs.collection_view(graph_name)
         if revision == -1:
-            last_revision_struct = max(map(GraphStruct.create, graph_view.iterate_all(include_value=True)),
-                                       key=lambda x: x.revision)
+            last_revision_struct = max(
+                map(lambda _: GraphStruct.create(_[1]), graph_view.iterate_all(include_value=True)),
+                key=lambda x: x.revision
+            )
             if last_revision_struct is None:
                 raise GraphStructureNotFound(graph_name)
             return last_revision_struct
@@ -79,7 +81,8 @@ class MasterLevelDBBackend(MasterBackend):
             new_revision = 0
         graph_struct.revision = new_revision
         # FIXME(luckygeck): possible race condition
-        return graph_view.put(str(new_revision), graph_struct.to_json())
+        graph_view.put(str(new_revision), graph_struct.to_json())
+        return new_revision
 
     def list_graph_struct(self, graph_name: Optional[str] = None, with_info: bool = False) -> Iterator[
             Tuple[str, int, Optional[GraphStruct]]]:
