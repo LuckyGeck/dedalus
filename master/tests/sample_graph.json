@@ -1,0 +1,51 @@
+{
+  "clusters": {
+    "I": ["localhost"],
+    "II": ["test-1", "test-2"]
+  },
+  "tasks": [
+    {
+      "task_name": "1",
+      "task": {
+        "resources": [
+          {
+            "name": "local_file",
+            "config": {
+              "local_path": "/dev/urandom"
+            }
+          }
+        ],
+        "executor": {
+          "name": "shell",
+          "config": {
+            "shell_bin": "zsh",
+            "shell_script": "echo $(date); sleep 1; echo $(date); sleep 1; echo $(date) >> /dev/stderr; sleep 1; echo $(date) >> /dev/stderr; sleep 1; exit 0; "
+          }
+        }
+      },
+      "hosts": "I"
+    },
+    {
+      "task_name": "2",
+      "task": {
+        "executor": {
+          "name": "shell", "config": { "shell_script": "echo 2; date" }
+        }
+      },
+      "hosts": "II"
+    },
+    {
+      "task_name": "3",
+      "task": {
+        "executor": {
+          "name": "shell", "config": { "shell_script": "echo 3; date" }
+        }
+      },
+      "hosts": "II"
+    },
+  ],
+  "deps": {
+    "3": ["2"],
+    "1": ["2", "3"]
+  }
+}

@@ -129,8 +129,8 @@ class TaskExecutionInfo(Config):
 
 
 class TaskStruct(Config):
-    task_resources = ListConfigField(ResourceInfo)
-    task_executor = ExecutorInfo()
+    resources = ListConfigField(ResourceInfo)
+    executor = ExecutorInfo()
 
 
 class TaskInfo(Config):

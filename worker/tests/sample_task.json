@@ -1,5 +1,5 @@
 {
-    "task_resources": [
+    "resources": [
         {
             "name": "local_file",
             "config": {
@@ -7,7 +7,7 @@
             }
         }
     ],
-    "task_executor": {
+    "executor": {
         "name": "shell",
         "config": {
             "shell_bin": "zsh",

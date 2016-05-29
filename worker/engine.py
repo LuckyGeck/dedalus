@@ -13,8 +13,8 @@ class TaskExecution(Thread):
         self.task_id = task_id
         self.backend = backend
         task_info = self.backend.read_task_info(task_id)
-        self.resources = [resources.construct_resource(_) for _ in task_info.structure.task_resources]
-        self.executor = executors.construct_executor(self.task_id, task_info.structure.task_executor)
+        self.resources = [resources.construct_resource(_) for _ in task_info.structure.resources]
+        self.executor = executors.construct_executor(self.task_id, task_info.structure.executor)
         self.user_stop = Event()
 
     def get_task_state(self):
@@ -102,6 +102,6 @@ class Engine:
             if state != TaskState.preparing:  # check if we need to create run a task
                 self.backend.write_task_info(task_id, task_info)
                 return old_state.name
-            # TODO(luckygeck): remove non-running tasks from self.tasks
+            # TODO: remove non-running tasks from self.tasks
             self.tasks[task_id] = TaskExecution(task_id, self.backend, self.resources, self.executors)
         return self.tasks[task_id].set_state(state).name
