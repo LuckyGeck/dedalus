@@ -1,7 +1,8 @@
 import abc
 from typing import Iterator, Tuple, Optional
 
-from common.models.task import TaskInfo, TaskState
+from common.models.task import TaskInfo
+from common.models.state import TaskState
 from util.config import Config
 from util.plugins import PluginBase, PluginsMaster
 from util.symver import SymVer

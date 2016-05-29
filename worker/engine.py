@@ -1,6 +1,7 @@
 from threading import Thread, Event
 
-from common.models.task import TaskInfo, TaskState
+from common.models.task import TaskInfo
+from common.models.state import TaskState
 from worker.backend import WorkerBackend
 from worker.executor import ExecutionEnded, Executors
 from worker.resource import Resources

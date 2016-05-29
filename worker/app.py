@@ -9,7 +9,7 @@ from uuid import uuid4
 
 from aiohttp.web_reqrep import Request
 from common.api import CommonApi, ResultOk, ResultError
-from common.models.task import TaskState
+from common.models.state import TaskState
 from worker.backend import WorkerBackends
 from worker.config import WorkerConfig
 from worker.engine import Engine
