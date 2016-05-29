@@ -87,8 +87,9 @@ class MasterLevelDBBackend(MasterBackend):
     def list_graph_struct(self, graph_name: Optional[str] = None, with_info: bool = False) -> Iterator[
             Tuple[str, int, Optional[GraphStruct]]]:
         db = self.graphs.collection_view(graph_name) if graph_name else self.graphs
-        for graph_name, graph_struct in db.iterate_all(include_value=with_info):
-            yield graph_name, GraphStruct.create(graph_struct) if graph_struct else None
+        for key, graph_struct in db.iterate_all(include_value=with_info):
+            name, revision = (graph_name, key) if graph_name else key.split('=', 1)
+            yield name, revision, GraphStruct.create(graph_struct) if graph_struct else None
 
     def read_schedule(self, graph_name: str) -> ScheduledGraph:
         return ScheduledGraph.create(self.schedule.get(graph_name))
