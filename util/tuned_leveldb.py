@@ -61,7 +61,8 @@ class CollectionView(DB):
                                  include_value=include_value,
                                  verify_checksums=verify_checksums, fill_cache=fill_cache)
         for key, value in it:
-            yield self._from_full_key(key), value
+            if key.startswith(self._data_key_prefix):
+                yield self._from_full_key(key), value
 
 
 class LevelDB(DB):

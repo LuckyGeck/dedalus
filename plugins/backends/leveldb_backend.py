@@ -65,7 +65,8 @@ class MasterLevelDBBackend(MasterBackend):
         if revision == -1:
             last_revision_struct = max(
                 map(lambda _: GraphStruct.create(_[1]), graph_view.iterate_all(include_value=True)),
-                key=lambda x: x.revision
+                key=lambda x: x.revision,
+                default=None
             )
             if last_revision_struct is None:
                 raise GraphStructureNotFound(graph_name)

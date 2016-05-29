@@ -51,6 +51,11 @@ class ResultError(AppResponse):
     code = 500
 
 
+class ResultNotFound(AppResponse):
+    status = 'error'
+    code = 404
+
+
 def json_response(*args, **kwargs):
     kwargs['dumps'] = functools.partial(json.dumps, ensure_ascii=False)
     return web.json_response(*args, **kwargs)

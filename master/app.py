@@ -9,8 +9,8 @@ from uuid import uuid4
 
 from aiohttp.web_reqrep import Request
 from common.models.graph import GraphInstanceInfo
-from common.api import CommonApi, ResultOk, ResultError
-from master.backend import MasterBackends
+from common.api import CommonApi, ResultOk, ResultError, ResultNotFound
+from master.backend import MasterBackends, GraphStructureNotFound
 from master.config import MasterConfig
 from master.engine import Engine
 from master.scheduler import Scheduler
@@ -50,6 +50,19 @@ class MasterApp:
         rev = self.engine.add_graph_struct(graph_name=graph_name, graph_struct=args)
         return ResultOk({'graph_name': graph_name, 'revision': rev})
 
+    def read_graph(self, args: dict, request: Request):
+        graph_name = request.match_info.get('graph_name', None)
+        revision = int(request.match_info.get('revision', args.get('revision', -1)))
+        if not graph_name:
+            return ResultError(error='graph_name should be set')
+        try:
+            graph_struct = self.backend.read_graph_struct(graph_name, revision)
+            return ResultOk(graph_struct.to_json())
+        except KeyError:
+            return ResultNotFound(error='Graph with revision not found', name=graph_name, revision=revision)
+        except GraphStructureNotFound as ex:
+            return ResultNotFound(error=str(ex), name=graph_name)
+
     def launch_graph(self, args: dict, request: Request):
         graph_name = request.match_info.get('graph_name', None)
         revision = int(request.match_info.get('revision', -1))
@@ -85,6 +98,8 @@ class MasterApi(CommonApi):
             ('GET', '/v1.0/graphs', 'list_graphs'),
             ('POST', '/v1.0/graph', 'create_graph'),
             ('POST', '/v1.0/graph/{graph_name}', 'create_graph'),
+            ('GET', '/v1.0/graph/{graph_name}', 'read_graph'),
+            ('GET', '/v1.0/graph/{graph_name}/{revision}', 'read_graph'),
             ('POST', '/v1.0/graph/{graph_name}/{revision}/launch', 'launch_graph'),
             ('POST', '/v1.0/graph/{graph_name}/launch', 'launch_graph'),
             ('GET', '/v1.0/instances', 'list_instances'),
