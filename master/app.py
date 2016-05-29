@@ -82,6 +82,15 @@ class MasterApp:
             for instance_id, instance_info in it
         ])
 
+    def read_instance(self, args: dict, request: Request):
+        instance_id = request.match_info.get('instance_id', None)
+        if not instance_id:
+            return ResultError(error='Instance id should be set')
+        try:
+            return ResultOk(self.backend.read_graph_instance_info(instance_id).to_json())
+        except KeyError:
+            return ResultNotFound(error='Instance with needed id is not found', instance_id=instance_id)
+
 
 class MasterApi(CommonApi):
     def __init__(self, loop, cfg: MasterConfig) -> None:
@@ -103,6 +112,7 @@ class MasterApi(CommonApi):
             ('POST', '/v1.0/graph/{graph_name}/{revision}/launch', 'launch_graph'),
             ('POST', '/v1.0/graph/{graph_name}/launch', 'launch_graph'),
             ('GET', '/v1.0/instances', 'list_instances'),
+            ('GET', '/v1.0/instance/{instance_id}', 'read_instance'),
         ]
 
 
