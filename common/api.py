@@ -106,9 +106,8 @@ class CommonApi(metaclass=abc.ABCMeta):
             self.logger.error('App error: %s', e)
             result = ResultError(code=ErrorCode.app_error, reason=str(e))
         except Exception as e:
-            raise
             self.logger.error('Exception [%s]: %s', e.__class__.__name__, e)
-            result = ResultError(code=ErrorCode.app_error, reason=str(e))
+            result = ResultError(code=ErrorCode.app_error, exception=e.__class__.__name__, reason=str(e))
 
         return json_response(result.to_dict(), status=result.code)
 
