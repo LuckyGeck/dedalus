@@ -11,5 +11,5 @@ class Engine:
 
     def add_graph_instance(self, instance_id: str, graph_struct: GraphStruct) -> GraphInstanceInfo:
         instance = GraphInstanceInfo(instance_id, graph_struct)
-        self.backend.write_graph_instance_info(instance_id, instance_id)
+        self.backend.write_graph_instance_info(instance_id, instance)
         return instance
