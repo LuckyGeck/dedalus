@@ -3,6 +3,7 @@ from typing import Iterator, Tuple, Optional
 
 from common.models.graph import GraphInstanceInfo, GraphStruct
 from common.models.schedule import ScheduledGraph
+from common.models.state import GraphInstanceState
 from util.config import Config
 from util.plugins import PluginBase, PluginsMaster
 from util.symver import SymVer
@@ -86,6 +87,28 @@ class MasterBackend(PluginBase, metaclass=abc.ABCMeta):
     def list_schedules(self) -> Iterator[ScheduledGraph]:
         """List all scheduled graphs"""
         pass
+
+    def read_instance_state(self, instance_id: str) -> GraphInstanceState:
+        """
+        Receives graph instance state from backend.
+        :raises if instance is not found
+        :param instance_id: GraphInstanceInfo's id
+        :return: Current graph instance state
+        """
+        return self.read_graph_instance_info(instance_id).exec_stats.state
+
+    def write_instance_state(self, instance_id: str, state: str) -> GraphInstanceState:
+        """
+        Changes graph instance state and saves it to backend.
+        :raises if instance is not found
+        :param instance_id: GraphInstanceInfo's id to change state for
+        :param state: New state for a graph instance
+        :return: Previous graph instance state
+        """
+        instance_info = self.read_graph_instance_info(instance_id)
+        old_state = instance_info.exec_stats.name.change_state(state, force=False)
+        self.write_graph_instance_info(instance_id, instance_info)
+        return old_state
 
 
 class MasterBackends(PluginsMaster):

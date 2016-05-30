@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 import requests
 from time import sleep
+from common.models.state import TaskState
 
 
 def main():
@@ -12,9 +13,9 @@ def main():
     print(start_result.json())
     while True:
         sleep(1)
-        state = requests.get('http://localhost:8080/v1.0/task/{}/state'.format(task_id)).json()
-        print(state)
-        if state['payload']['state'] != 'running':
+        state_json = requests.get('http://localhost:8080/v1.0/task/{}/state'.format(task_id)).json()
+        print(state_json)
+        if TaskState(state_json['payload']['state']).is_terminal:
             break
 
 

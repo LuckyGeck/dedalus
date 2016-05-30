@@ -15,11 +15,17 @@ class ForbiddenStateChange(Exception):
 
 class StateMachine(BaseConfig):
     idle = 'idle'
+    states_aggregation_ordering = [idle]
 
     @property
     @abc.abstractmethod
     def links(self) -> 'Mapping[str, Set[str]]':
-        pass
+        return dict()
+
+    @property
+    @abc.abstractmethod
+    def failed_states(self) -> 'Set[str]':
+        return {}
 
     def __init__(self, state: str = idle, **kwargs):
         super().__init__(**kwargs)
@@ -52,6 +58,21 @@ class StateMachine(BaseConfig):
         attr = getattr(cls, state)
         return attr == state and isinstance(attr, str)
 
+    @property
+    def is_terminal(self) -> bool:
+        return not self.links[self._state]
+
+    @property
+    def is_failed(self) -> bool:
+        return self.name in self.failed_states
+
+    @classmethod
+    def aggregate_states(cls, states: 'Set[str]'):
+        for state in cls.states_aggregation_ordering:
+            if state in states:
+                return cls(state)
+        return cls()
+
     def change_state(self, new_state: str, force: bool = False) -> 'StateMachine':
         assert self.is_status(new_state), 'Unknown state: {}'.format(new_state)
         old_state = self._state
@@ -68,6 +89,7 @@ class TaskState(StateMachine):
     prepared = 'prepared'
     running = 'running'
     finished = 'finished'
+    failed = 'failed'
     stopped = 'stopped'
     prepfailed = 'prepfailed'
 
@@ -75,17 +97,25 @@ class TaskState(StateMachine):
         idle: {preparing, stopped},
         preparing: {prepfailed, prepared, stopped},
         prepared: {running, stopped},
-        running: {finished, stopped},
+        running: {finished, failed, stopped},
         finished: {},
+        failed: {},
         stopped: {},
         prepfailed: {},
     }
+
+    states_aggregation_ordering = (
+        stopped, prepfailed, failed, running, prepared, preparing, idle, finished
+    )
+
+    failed_states = {stopped, prepfailed, failed}
 
 
 class GraphInstanceState(StateMachine):
     idle = 'idle'
     running = 'running'
     finished = 'finished'
+    failed = 'failed'
     stopped = 'stopped'
     links = {
         idle: {running, stopped},
@@ -93,3 +123,9 @@ class GraphInstanceState(StateMachine):
         finished: {},
         stopped: {},
     }
+
+    states_aggregation_ordering = (
+        stopped, failed, running, idle, finished
+    )
+
+    failed_states = {stopped, failed}

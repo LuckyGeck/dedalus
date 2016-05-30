@@ -8,7 +8,7 @@ from itertools import islice
 from uuid import uuid4
 
 from aiohttp.web_reqrep import Request
-from common.models.graph import GraphInstanceInfo
+from common.models.state import GraphInstanceState
 from common.api import CommonApi, ResultOk, ResultError, ResultNotFound
 from master.backend import MasterBackends, GraphStructureNotFound
 from master.config import MasterConfig
@@ -91,6 +91,22 @@ class MasterApp:
         except KeyError:
             return ResultNotFound(error='Instance with needed id is not found', instance_id=instance_id)
 
+    def start_instance(self, args: dict, request: Request):
+        instance_id = request.match_info.get('instance_id', None)
+        if not instance_id:
+            return ResultError(error='instance_id field should be set')
+        return self._set_instance_state(instance_id, GraphInstanceState.running)
+
+    def stop_instance(self, args: dict, request: Request):
+        instance_id = request.match_info.get('instance_id', None)
+        if not instance_id:
+            return ResultError(error='instance_id field should be set')
+        return self._set_instance_state(instance_id, GraphInstanceState.stopped)
+
+    def _set_instance_state(self, instance_id: str, instance_state_name: str):
+        prev_state = self.engine.set_graph_instance_state(instance_id, instance_state_name)
+        return ResultOk(prev_state=prev_state, new_state=instance_state_name)
+
 
 class MasterApi(CommonApi):
     def __init__(self, loop, cfg: MasterConfig) -> None:
@@ -113,6 +129,8 @@ class MasterApi(CommonApi):
             ('POST', '/v1.0/graph/{graph_name}/launch', 'launch_graph'),
             ('GET', '/v1.0/instances', 'list_instances'),
             ('GET', '/v1.0/instance/{instance_id}', 'read_instance'),
+            ('GET', '/v1.0/instance/{instance_id}/start', 'start_instance'),
+            ('GET', '/v1.0/instance/{instance_id}/stop', 'stop_instance'),
         ]
 
 

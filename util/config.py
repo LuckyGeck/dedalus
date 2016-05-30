@@ -1,6 +1,6 @@
 import abc
 import datetime
-from typing import NamedTuple, Callable, Optional, TypeVar, List, Union
+from typing import NamedTuple, Optional, TypeVar, List, Union
 
 T = TypeVar('T')
 
@@ -55,8 +55,12 @@ class BaseConfig(metaclass=abc.ABCMeta):
         pass
 
 
-def create_list_field_type(type_t: Callable[[], Union[BaseConfig, T]]) -> Callable[[], BaseConfig]:
-    class ListConfigFieldBase(BaseConfig, list):
+class ListConfigFieldBase(BaseConfig, list):
+    pass
+
+
+def create_list_field_type(type_t: type(Union[BaseConfig, T])) -> type(ListConfigFieldBase):
+    class ListConfigFieldBaseImpl(ListConfigFieldBase):
         _type_fabric = type_t
 
         @classmethod
@@ -105,14 +109,18 @@ def create_list_field_type(type_t: Callable[[], Union[BaseConfig, T]]) -> Callab
                         self.get_path_to_child(str(idx)), self._type_fabric.__name__, obj.__class__.__name__
                     )
 
-    return ListConfigFieldBase
+    return ListConfigFieldBaseImpl
 
 
 StrListConfigField = create_list_field_type(str)
 
 
-def create_dict_field_type(type_t: Callable[[], T]) -> Callable[[], BaseConfig]:
-    class DictConfigFieldBase(BaseConfig, dict):
+class DictConfigFieldBase(BaseConfig, dict):
+    pass
+
+
+def create_dict_field_type(type_t: type(T)) -> type(DictConfigFieldBase):
+    class DictConfigFieldBaseImpl(DictConfigFieldBase):
         _type_fabric = type_t
 
         @classmethod
@@ -156,7 +164,7 @@ def create_dict_field_type(type_t: Callable[[], T]) -> Callable[[], BaseConfig]:
                     assert isinstance(obj, self._type_fabric), 'Field {} should have type {}, but {} passed'.format(
                         self.get_path_to_child(key), self._type_fabric.__name__, obj.__class__.__name__
                     )
-    return DictConfigFieldBase
+    return DictConfigFieldBaseImpl
 
 
 class DateTimeField(BaseConfig):

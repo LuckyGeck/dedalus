@@ -65,7 +65,10 @@ class TaskExecutionInfo(Config):
     def finish_execution(self, retcode: int, is_initiated_by_user: bool = False):
         self.finish_time.set_to_now()
         self.retcode.set_retcode(retcode)
-        self.state.change_state(TaskState.stopped if is_initiated_by_user else TaskState.finished)
+        if retcode == 0 and not is_initiated_by_user:
+            self.state.change_state(TaskState.finished)
+        else:
+            self.state.change_state(TaskState.stopped if is_initiated_by_user else TaskState.failed)
 
 
 class TaskStruct(Config):

@@ -1,9 +1,11 @@
 from itertools import chain
-from collections import Counter
+from collections import Counter, defaultdict
 from typing import Iterable, Tuple
 
 from common.models.task import TaskStruct
-from util.config import Config, ConfigField, create_dict_field_type, create_list_field_type, StrListConfigField
+from common.models.state import GraphInstanceState, TaskState
+from util.config import Config, ConfigField, create_dict_field_type, create_list_field_type, StrListConfigField, \
+    DateTimeField
 
 
 class UnknownTasksInDeps(Exception):
@@ -32,11 +34,14 @@ class UnknownClusters(Exception):
 
 class ExtendedTaskStruct(Config):
     task_name = ConfigField(type=str, required=True, default=None)
-    task = TaskStruct()
+    task_struct = TaskStruct()
     hosts = StrListConfigField()
 
 
 class ExtendedTaskList(create_list_field_type(ExtendedTaskStruct)):
+    def __iter__(self) -> 'Iterable[ExtendedTaskStruct]':
+        return super().__iter__()
+
     def verify(self):
         super().verify()
         assert all(isinstance(_, ExtendedTaskStruct) for _ in self)
@@ -50,6 +55,9 @@ class ExtendedTaskList(create_list_field_type(ExtendedTaskStruct)):
 
 
 class TaskDependencies(create_dict_field_type(StrListConfigField)):
+    def __iter__(self) -> 'Iterable[Tuple[str, List[str]]]':
+        return super().__iter__()
+
     def verify(self):
         super().verify()
         value_tasks = set(chain.from_iterable(self.values()))
@@ -59,6 +67,7 @@ class TaskDependencies(create_dict_field_type(StrListConfigField)):
         not_found_tasks.update(value_tasks - all_tasks)
         if not_found_tasks:
             raise UnknownTasksInDeps(not_found_tasks)
+        # FIXME: check for cycles
 
 
 class GraphStruct(Config):
@@ -70,6 +79,70 @@ class GraphStruct(Config):
     deps = TaskDependencies()
 
 
+class TaskOnHostExecutionInfo(Config):
+    task_id = ConfigField(type=str, required=False, default=None)
+    state = TaskState()
+
+
+HostToExecutionInfo = create_dict_field_type(TaskOnHostExecutionInfo)
+
+
+class TaskExecutionInfo(Config):
+    per_host_info = HostToExecutionInfo()
+    dependents = StrListConfigField()
+
+    @property
+    def aggregated_state(self) -> TaskState:
+        states = {_.state.name for _ in self.per_host_info.values() if _.task_id}
+        return TaskState.aggregate_states(states)
+
+
+TaskNameToExecutionInfo = create_dict_field_type(TaskExecutionInfo)
+
+
+class GraphInstanceExecutionInfo(Config):
+    state = GraphInstanceState()
+
+    start_time = DateTimeField()
+    finish_time = DateTimeField()
+
+    per_task_execution_info = TaskNameToExecutionInfo()  # type: Dict[str, TaskExecutionInfo]
+
+    def start_execution(self):
+        self.state.change_state(GraphInstanceState.running)
+        self.start_time.set_to_now()
+
+    def init_per_task_execution_info(self):
+        assert isinstance(self._parent, GraphInstanceInfo)
+        structure = self._parent.structure
+        task2dependents = defaultdict(set)
+        for task_from, deps in structure.deps.items():
+            for task_to in deps:
+                task2dependents[task_to].add(task_from)
+        for task in structure.tasks:
+            # FIXME: upyachka with adding elements to config fields
+            task_execution_info = \
+                self.per_task_execution_info.setdefault(task.task_name,
+                                                        TaskExecutionInfo(parent_object=self.per_task_execution_info,
+                                                                          parent_key=task.task_name))
+            task_execution_info.dependents.extend(task2dependents[task.task_name])
+            for cluster in task.hosts:
+                for host in structure.clusters[cluster]:
+                    task_execution_info.per_host_info.setdefault(host,
+                                                                 TaskOnHostExecutionInfo(
+                                                                     parent_object=task_execution_info.per_host_info,
+                                                                     parent_key=host
+                                                                 ))
+
+    def finish_execution(self, is_failed: bool = False, is_initiated_by_user: bool = False):
+        self.finish_time.set_to_now()
+        if not is_failed and not is_initiated_by_user:
+            self.state.change_state(GraphInstanceState.finished)
+        else:
+            self.state.change_state(GraphInstanceState.stopped if is_initiated_by_user else GraphInstanceState.failed)
+
+
 class GraphInstanceInfo(Config):
     instance_id = ConfigField(type=str, required=True, default=None)
     structure = GraphStruct()
+    exec_stats = GraphInstanceExecutionInfo()
