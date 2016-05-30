@@ -1,21 +1,22 @@
 #!/usr/bin/env python
-import requests
 from time import sleep
 from common.models.state import TaskState
+from worker.api_client import WorkerApiClient
+import json
 
 
 def main():
     # http POST :8080/v1.0/task/
-    data = requests.post('http://localhost:8080/v1.0/task/', data=open('worker/tests/sample_task.json').read())
-    task_id = data.json()['payload']['task_id']
+    cli = WorkerApiClient(worker_host='localhost', worker_port=8081)
+    task_id = cli.create_task(task_struct=json.load(open('worker/tests/sample_task.json')))
     print(task_id)
-    start_result = requests.post('http://localhost:8080/v1.0/task/{}/start'.format(task_id))
-    print(start_result.json())
+    task_state = cli.start_task(task_id)
+    print(task_state.name)
     while True:
         sleep(1)
-        state_json = requests.get('http://localhost:8080/v1.0/task/{}/state'.format(task_id)).json()
-        print(state_json)
-        if TaskState(state_json['payload']['state']).is_terminal:
+        task_state = cli.get_task_state(task_id)
+        print(task_state.name)
+        if task_state.is_terminal:
             break
 
 

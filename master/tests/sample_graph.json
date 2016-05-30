@@ -6,7 +6,7 @@
   "tasks": [
     {
       "task_name": "1",
-      "task": {
+      "task_struct": {
         "resources": [
           {
             "name": "local_file",
@@ -27,7 +27,7 @@
     },
     {
       "task_name": "2",
-      "task": {
+      "task_struct": {
         "executor": {
           "name": "shell", "config": { "shell_script": "echo 2; date" }
         }
@@ -36,7 +36,7 @@
     },
     {
       "task_name": "3",
-      "task": {
+      "task_struct": {
         "executor": {
           "name": "shell", "config": { "shell_script": "echo 3; date" }
         }
