@@ -9,8 +9,9 @@ class ForbiddenStateChange(Exception):
         self.to_state = to_state_name
 
     def __str__(self):
-        return 'TaskExecution state change from \'{}\' is only allowed to {} (tried to \'{}\')'.format(
-            self.from_state_obj.name, self.from_state_obj.links[self.from_state_obj.name], self.to_state)
+        return '{} state change from \'{}\' is only allowed to {} (tried to \'{}\')'.format(
+            self.from_state_obj.__class__.__name__, self.from_state_obj.name,
+            self.from_state_obj.links[self.from_state_obj.name], self.to_state)
 
 
 class StateMachine(BaseConfig):
@@ -119,7 +120,8 @@ class GraphInstanceState(StateMachine):
     stopped = 'stopped'
     links = {
         idle: {running, stopped},
-        running: {finished, stopped},
+        running: {finished, failed, stopped},
+        failed: {},
         finished: {},
         stopped: {},
     }

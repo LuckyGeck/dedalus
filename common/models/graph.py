@@ -106,6 +106,8 @@ class GraphInstanceExecutionInfo(Config):
     start_time = DateTimeField()
     finish_time = DateTimeField()
 
+    fail_msg = ConfigField(type=str, required=False, default=None)
+
     per_task_execution_info = TaskNameToExecutionInfo()  # type: Dict[str, TaskExecutionInfo]
 
     def start_execution(self):
@@ -134,8 +136,9 @@ class GraphInstanceExecutionInfo(Config):
                                                                      parent_key=host
                                                                  ))
 
-    def finish_execution(self, is_failed: bool = False, is_initiated_by_user: bool = False):
+    def finish_execution(self, is_failed: bool = False, is_initiated_by_user: bool = False, fail_msg: str = None):
         self.finish_time.set_to_now()
+        self.fail_msg = fail_msg
         if not is_failed and not is_initiated_by_user:
             self.state.change_state(GraphInstanceState.finished)
         else:

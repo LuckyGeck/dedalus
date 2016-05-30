@@ -6,6 +6,7 @@ from master.backend import MasterBackend
 from threading import Lock, Thread, Event
 from common.models.state import GraphInstanceState, TaskState
 from worker.api_client import WorkerApiClient
+import logging
 
 
 class TaskMentor:
@@ -138,6 +139,7 @@ class GraphExecutor(Thread):
         self.start()
 
     def run(self):
+        logging.debug('Start executing %s', self.instance_id)
         try:
             instance_info = self.engine.backend.read_graph_instance_info(self.instance_id)
             if instance_info.exec_stats.state.idle:
@@ -149,9 +151,14 @@ class GraphExecutor(Thread):
             while not graph_mentor.is_done:
                 time.sleep(1)
                 graph_mentor.tick()  # it will switch graph_mentor to is_done to exit on _shutdown and _user_stop Events
+        except Exception as ex:
+            instance_info = self.engine.backend.read_graph_instance_info(self.instance_id)
+            instance_info.exec_stats.finish_execution(is_failed=True, is_initiated_by_user=False, fail_msg=str(ex))
+            self.engine.backend.write_graph_instance_info(self.instance_id, instance_info)
         finally:
             with self.engine.instances_lock:
                 del self.engine.running_graphs[self.instance_id]
+            logging.debug('Stop executing %s', self.instance_id)
 
     def set_state(self, target_state: str) -> GraphInstanceState:
         state = self.engine.backend.read_instance_state(self.instance_id)
@@ -161,7 +168,7 @@ class GraphExecutor(Thread):
             if target_state == TaskState.stopped:
                 self._user_stop.set()
             else:
-                self.engine.backend.write_instance_state(self.instance_id, state)
+                self.engine.backend.write_instance_state(self.instance_id, state.name)
         return old_state
 
     def shutdown(self):
@@ -178,7 +185,7 @@ class Engine:
     def _spawn_running_graphs(self):
         with self.instances_lock:
             for instance_id, instance_info in self.backend.list_graph_instance_info(with_info=True):
-                if instance_info.exec_stats.state == GraphInstanceState.running:
+                if instance_info.exec_stats.state.name == GraphInstanceState.running:
                     self.running_graphs[instance_id] = GraphExecutor(instance_id, self)
 
     def add_graph_struct(self, graph_name: str, graph_struct: dict) -> int:
