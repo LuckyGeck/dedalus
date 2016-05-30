@@ -212,7 +212,7 @@ class MetaConfig(abc.ABCMeta):
             if isinstance(attr_value, ConfigField):
                 fields[attr_name] = attr_value
             elif isinstance(attr_value, BaseConfig):
-                fields[attr_name] = ConfigField(type=attr_value.__class__, required=True, default=None)
+                fields[attr_name] = ConfigField(type=attr_value.__class__, required=True, default=attr_value)
         nmspc['_fields'] = fields
         return super().__new__(mcs, name, bases, nmspc)
 
@@ -222,7 +222,17 @@ class MetaConfig(abc.ABCMeta):
             if issubclass(v.type, BaseConfig):
                 setattr(obj, k, v.type(parent_object=obj, parent_key=k))
             else:
-                setattr(obj, k, v.default)
+                val = kwargs.get(k, v.default)
+                if isinstance(val, v.type) or val is None:
+                    setattr(obj, k, val)
+                else:
+                    raise IncorrectFieldType(
+                        'Field {} should have type {}, but {} passed.'.format(obj.get_path_to_child(k),
+                                                                              v.type.__name__,
+                                                                              val.__class__.__name__))
+        for k, v in cls._fields.items():
+            if issubclass(v.type, BaseConfig):
+                getattr(obj, k).from_json(v.default.to_json())
         return obj
 
 

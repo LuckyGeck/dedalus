@@ -10,7 +10,9 @@ class PluginsConfig(Config):
 
 
 class WorkerConfig(Config):
-    api = CommonApiConfig()
+    api = CommonApiConfig(common_logger='dedalus.worker.api.common',
+                          access_logger='dedalus.worker.api.access',
+                          port=8081)
     backend = ConfigField(type=str, required=True, default='leveldb')
     backend_config = ConfigField(type=dict, required=True, default=dict())
     plugins = PluginsConfig()
