@@ -129,8 +129,8 @@ class MasterApi(CommonApi):
             ('POST', '/v1.0/graph/{graph_name}/launch', 'launch_graph'),
             ('GET', '/v1.0/instances', 'list_instances'),
             ('GET', '/v1.0/instance/{instance_id}', 'read_instance'),
-            ('GET', '/v1.0/instance/{instance_id}/start', 'start_instance'),
-            ('GET', '/v1.0/instance/{instance_id}/stop', 'stop_instance'),
+            ('POST', '/v1.0/instance/{instance_id}/start', 'start_instance'),
+            ('POST', '/v1.0/instance/{instance_id}/stop', 'stop_instance'),
         ]
 
 
