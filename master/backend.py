@@ -105,6 +105,7 @@ class MasterBackend(PluginBase, metaclass=abc.ABCMeta):
         :param state: New state for a graph instance
         :return: Previous graph instance state
         """
+        assert isinstance(state, GraphInstanceState)
         instance_info = self.read_graph_instance_info(instance_id)
         old_state = instance_info.exec_stats.name.change_state(state, force=False)
         self.write_graph_instance_info(instance_id, instance_info)

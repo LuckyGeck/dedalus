@@ -69,8 +69,10 @@ class TaskMentor:
 
 
 class GraphMentor:
-    def __init__(self, instance_info: GraphInstanceInfo, backend: MasterBackend):
+    def __init__(self, instance_info: GraphInstanceInfo, backend: MasterBackend, shutdown: Event, user_stop: Event):
         self.backend = backend
+        self._shutdown = shutdown
+        self._user_stop = user_stop
         self.instance_info = instance_info
         self.task_mentors = {
             task.task_name: TaskMentor(task, self)
@@ -88,14 +90,15 @@ class GraphMentor:
     def tick(self):
         ready_mentors = []
         new_mentors = dict()
-        for task_name, mentor in self.working_mentors:
+        for task_name, mentor in self.working_mentors.items():
+            if self._shutdown.is_set() or self._user_stop.is_set():
+                self._stop_execution()
+                return
             mentor.tick()
             if mentor.is_done:
                 ready_mentors.append(task_name)
                 if mentor.is_failed:
-                    self.instance_info.exec_stats.finish_execution(is_failed=True, is_initiated_by_user=False)
-                    self._save_to_backend()
-                    self.working_mentors = {}
+                    self._stop_execution()
                     return
                 new_mentors.update({_.task_name: _ for _ in mentor.get_ready_dependents()})
         for task_name, mentor in new_mentors.items():
@@ -106,8 +109,19 @@ class GraphMentor:
             self.instance_info.exec_stats.finish_execution(is_failed=False, is_initiated_by_user=False)
             self._save_to_backend()
 
+    def _stop_execution(self):
+        if not self._shutdown.is_set():
+            self.instance_info.exec_stats.finish_execution(is_failed=self.is_failed,
+                                                           is_initiated_by_user=self._user_stop.is_set())
+            self._save_to_backend()
+        self.working_mentors = {}
+
     def _save_to_backend(self):
         self.backend.write_graph_instance_info(self.instance_info.instance_id, self.instance_info)
+
+    @property
+    def is_failed(self) -> bool:
+        return any(_.is_failed for _ in self.task_mentors.values())
 
     @property
     def is_done(self) -> bool:
@@ -124,21 +138,31 @@ class GraphExecutor(Thread):
         self.start()
 
     def run(self):
-        instance_info = self.engine.backend.read_graph_instance_info(self.instance_id)
-        if instance_info.exec_stats.state.idle:
-            instance_info.exec_stats.start_execution()
-            instance_info.exec_stats.init_per_task_execution_info()
-            self.engine.backend.write_graph_instance_info(self.instance_id, instance_info)
+        try:
             instance_info = self.engine.backend.read_graph_instance_info(self.instance_id)
-        graph_mentor = GraphMentor(instance_info, self.engine.backend)
-        while not self._shutdown.is_set() and not self._user_stop.is_set() and not graph_mentor.is_done:
-            time.sleep(1)
-            graph_mentor.tick()
-        with self.engine.instances_lock:
-            del self.engine.running_graphs[self.instance_id]
+            if instance_info.exec_stats.state.idle:
+                instance_info.exec_stats.start_execution()
+                instance_info.exec_stats.init_per_task_execution_info()
+                self.engine.backend.write_graph_instance_info(self.instance_id, instance_info)
+                instance_info = self.engine.backend.read_graph_instance_info(self.instance_id)
+            graph_mentor = GraphMentor(instance_info, self.engine.backend, self._shutdown, self._user_stop)
+            while not graph_mentor.is_done:
+                time.sleep(1)
+                graph_mentor.tick()  # it will switch graph_mentor to is_done to exit on _shutdown and _user_stop Events
+        finally:
+            with self.engine.instances_lock:
+                del self.engine.running_graphs[self.instance_id]
 
-    def set_state(self, state: str) -> GraphInstanceState:
-        pass
+    def set_state(self, target_state: str) -> GraphInstanceState:
+        state = self.engine.backend.read_instance_state(self.instance_id)
+        old_state_name = state.name
+        old_state = state.change_state(new_state=target_state, force=False)  # check for validness of state change
+        if old_state_name != target_state:
+            if target_state == TaskState.stopped:
+                self._user_stop.set()
+            else:
+                self.engine.backend.write_instance_state(self.instance_id, state)
+        return old_state
 
     def shutdown(self):
         self._shutdown.set()
@@ -169,14 +193,16 @@ class Engine:
 
     def set_graph_instance_state(self, instance_id: str, state: str) -> str:
         with self.instances_lock:
-            if instance_id not in self.running_graphs:
-                instance_info = self.backend.read_graph_instance_info(instance_id)
-                old_state = instance_info.exec_stats.state.change_state(state)  # check state transition validity
-                if state != GraphInstanceState.running:  # check if we need to create run a task
-                    self.backend.write_graph_instance_info(instance_id, instance_info)
-                    return old_state.name
+            if instance_id in self.running_graphs:
+                return self.running_graphs[instance_id].set_state(state).name
+            instance_info = self.backend.read_graph_instance_info(instance_id)
+            old_state = instance_info.exec_stats.state.change_state(state)  # check state transition validity
+            if state != GraphInstanceState.running:  # check if we need to create run a task
+                self.backend.write_graph_instance_info(instance_id, instance_info)
+            else:
+                assert state == GraphInstanceState.running
                 self.running_graphs[instance_id] = GraphExecutor(instance_id, self)
-            return self.running_graphs[instance_id].set_state(state).name
+            return old_state.name
 
     def shutdown(self):
         with self.instances_lock:
