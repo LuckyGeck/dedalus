@@ -1,6 +1,6 @@
 from itertools import chain
 from collections import Counter, defaultdict
-from typing import Iterable, Tuple
+from typing import Iterable, Tuple, Dict, List
 
 from common.models.task import TaskStruct
 from common.models.state import GraphInstanceState, TaskState
@@ -88,7 +88,7 @@ HostToExecutionInfo = create_dict_field_type(TaskOnHostExecutionInfo)
 
 
 class TaskExecutionInfo(Config):
-    per_host_info = HostToExecutionInfo()
+    per_host_info = HostToExecutionInfo()  # type: Dict[str, TaskOnHostExecutionInfo]
     dependents = StrListConfigField()
 
     @property
