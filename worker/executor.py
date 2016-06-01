@@ -29,7 +29,7 @@ class Executor(PluginBase, metaclass=abc.ABCMeta):
         self.config.verify()
 
     @property
-    def default_working_dir(self):
+    def work_dir(self) -> str:
         return path.join(self.execution_data_root, self.execution_id)
 
     @classmethod

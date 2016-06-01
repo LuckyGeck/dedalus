@@ -35,18 +35,20 @@ class ShellExecutor(Executor):
         self._should_be_killed = False
         self._run_lock = Lock()
         self._subproc = None
-        if not self.config.work_dir:
-            self.config.work_dir = self.default_working_dir
-        if os.path.exists(self.config.work_dir):
-            raise ExecutionDataDirAlreadyExists(self.config.work_dir)
-        os.makedirs(self.config.work_dir)
+        if os.path.exists(self.work_dir):
+            raise ExecutionDataDirAlreadyExists(self.work_dir)
+        os.makedirs(self.work_dir)
         with open(self.script_path, 'x') as script_file:
             script_file.write(self.config.shell_script)
             script_file.flush()
 
     @property
+    def work_dir(self) -> str:
+        return self.config.work_dir if self.config.work_dir else super().work_dir
+
+    @property
     def script_path(self):
-        return os.path.join(self.config.work_dir, 'script')
+        return os.path.join(self.work_dir, 'script')
 
     def start(self) -> Iterable[Tuple[Optional[str], Optional[str]]]:
         with self._run_lock:
@@ -57,7 +59,7 @@ class ShellExecutor(Executor):
                 for _ in self.config.shell_args:
                     cmd = cmd[_]
                 cmd = cmd[self.script_path]
-                self._subproc = cmd.popen(cwd=self.config.work_dir)
+                self._subproc = cmd.popen(cwd=self.work_dir)
             return self.iterate_log(self._subproc)
 
     def ping(self):
