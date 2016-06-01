@@ -68,6 +68,8 @@ def instance_mode(client: MasterApiClient, args):
             logging.exception('Unsupported target state: {}'.format(args.target_state))
             exit(1)
         print('State for instance {} changed from {} to {}.'.format(args.id, answer[0].name, answer[1].name))
+    elif args.action == 'logs':
+        print(client.instance_logs(args.id, args.task_name, args.host, args.log_type), end='')
     else:
         logging.error('Not supported action for instance mode: %s', args.action)
         exit(1)
@@ -133,6 +135,12 @@ if __name__ == '__main__':
     instance_ctrl_action.add_argument('-i', '--id', required=True, help='Graph instance id to control')
     instance_ctrl_action.add_argument('-t', '--target-state', default='start', choices=('start', 'stop'),
                                       help='Target state for an instance')
+
+    instance_ctrl_action = instance_sub.add_parser('logs', help='Get graph instance logs', formatter_class=fmt)
+    instance_ctrl_action.add_argument('-i', '--id', required=True, help='Graph instance id to control')
+    instance_ctrl_action.add_argument('--task-name', required=True, help='Task name to get logs for')
+    instance_ctrl_action.add_argument('--host', required=True, help='Host to get logs from')
+    instance_ctrl_action.add_argument('--log-type', default='out', choices=('out', 'err'), help='Log type')
     args = parser.parse_args()
     if args.mode is None:
         parser.print_help()

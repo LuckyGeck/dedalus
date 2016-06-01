@@ -14,6 +14,7 @@ from master.backend import MasterBackends, GraphStructureNotFound
 from master.config import MasterConfig
 from master.engine import Engine
 from master.scheduler import Scheduler
+from worker.api_client import WorkerApiClient
 
 
 class MasterApp:
@@ -107,6 +108,28 @@ class MasterApp:
         prev_state = self.engine.set_graph_instance_state(instance_id, instance_state_name)
         return ResultOk(prev_state=prev_state, new_state=instance_state_name)
 
+    # TODO: move this proxy to storage layer
+    def instance_logs(self, args: dict, request: Request):
+        instance_id = request.match_info.get('instance_id', None)
+        task_name = request.match_info.get('task_name', None)
+        host = request.match_info.get('host', None)
+        log_type = request.match_info.get('log_type', None)
+        if not instance_id or not task_name or not host or not log_type:
+            return ResultError(error='All fields from (instance_id, task_name, host, log_type) should be set')
+        if log_type not in ('err', 'out'):
+            return ResultError(error='Log type can be only from (err, out)')
+        info = self.backend.read_graph_instance_info(instance_id)
+        task_info = info.exec_stats.per_task_execution_info.get(task_name)
+        if not task_info:
+            return ResultNotFound(error='Graph instance doesn\'t have task with this name',
+                                  instance_id=instance_id, task_name=task_name)
+        host_info = task_info.per_host_info.get(host)
+        if not host_info or not host_info.task_id:
+            return ResultNotFound(error='Specified task doesn\'t have an execution entry on specified host',
+                                  instance_id=instance_id, task_name=task_name, host=host)
+        # FIXME: Port is not passed
+        return ResultOk(instance_id=instance_id, task_name=task_name, host=host, log_type=log_type,
+                        data=WorkerApiClient(worker_host=host).get_task_log(host_info.task_id, log_type))
 
 class MasterApi(CommonApi):
     def __init__(self, loop, cfg: MasterConfig) -> None:
@@ -131,6 +154,7 @@ class MasterApi(CommonApi):
             ('GET', '/v1.0/instance/{instance_id}', 'read_instance'),
             ('POST', '/v1.0/instance/{instance_id}/start', 'start_instance'),
             ('POST', '/v1.0/instance/{instance_id}/stop', 'stop_instance'),
+            ('GET', '/v1.0/instance/{instance_id}/logs/{task_name}/{host}/{log_type}', 'instance_logs'),
         ]
 
 
