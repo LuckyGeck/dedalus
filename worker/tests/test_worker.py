@@ -17,8 +17,11 @@ def main():
         task_state = cli.get_task_state(task_id)
         print(task_state.name)
         if task_state.is_terminal:
+            print('Out:')
+            print(cli.get_task_log(task_id, 'out'), end='')
+            print('Err:')
+            print(cli.get_task_log(task_id, 'err'), end='')
             break
-
 
 if __name__ == '__main__':
     main()

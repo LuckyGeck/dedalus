@@ -28,3 +28,9 @@ class WorkerApiClient:
         """
         return TaskState(requests.get('{}task/{}/state'.format(self._url_prefix, task_id)).json()['payload']['state'])
 
+    def get_task_log(self, task_id: str, log_type: str = 'out') -> str:
+        """Returns task log by task_id and log type
+        :returns str: Contents of the log
+        """
+        assert log_type in ('out', 'err'), 'Log type should be one of (out, err)'
+        return requests.get('{}task/{}/log/{}'.format(self._url_prefix, task_id, log_type)).json()['payload']['data']

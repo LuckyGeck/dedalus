@@ -4,6 +4,7 @@ import argparse
 import asyncio
 import json as js
 import logging
+import os
 from itertools import islice
 from uuid import uuid4
 
@@ -76,6 +77,19 @@ class WorkerApp:
             ]
         )
 
+    def task_log(self, args: dict, request: Request):
+        task_id = request.match_info.get('task_id', None)
+        log_type = request.match_info.get('log_type', None)
+        if not task_id:
+            return ResultError(error='task_id field should be set')
+        if log_type not in ('err', 'out'):
+            return ResultError(error='Log type should be one of (err, out)')
+        # TODO: extract calculation of execution data root
+        self.backend.read_task_info(task_id)  # just verify that this task exists
+        log_path = os.path.join(self.config.plugins.execution_data_root, task_id, 'std{}.log'.format(log_type))
+        with open(log_path, 'r') as f:
+            return ResultOk(log_type=log_type, data=f.read())
+
 
 class WorkerApi(CommonApi):
     def __init__(self, loop, cfg: WorkerConfig) -> None:
@@ -95,6 +109,7 @@ class WorkerApi(CommonApi):
             ('GET',  '/v1.0/task/{task_id}/state', 'get_task_state'),
             ('POST', '/v1.0/task/{task_id}/start', 'start_task'),
             ('POST', '/v1.0/task/{task_id}/stop', 'stop_task'),
+            ('GET', '/v1.0/task/{task_id}/log/{log_type}', 'task_log'),
         ]
 
 
