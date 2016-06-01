@@ -1,3 +1,4 @@
+import os
 from threading import Thread, Event
 
 from common.models.task import TaskInfo
@@ -58,11 +59,13 @@ class TaskExecution(Thread):
         self.backend.write_task_info(self.task_id, task_info)
         return_code = None
         try:
-            for stdout, stderr in it:
-                if stdout is not None:
-                    print('Out:', stdout)
-                if stderr is not None:
-                    print('Err:', stderr)
+            with open(os.path.join(self.executor.work_dir, 'stdout.log'), 'a') as out_file:
+                with open(os.path.join(self.executor.work_dir, 'stderr.log'), 'a') as err_file:
+                    for stdout, stderr in it:
+                        if stdout is not None:
+                            print(stdout, file=out_file)
+                        if stderr is not None:
+                            print(stderr, file=err_file)
         except ExecutionEnded as ex:
             print('Execution ended! RetCode:', ex.retcode)
             return_code = ex.retcode
