@@ -1,16 +1,17 @@
 from itertools import chain
 from collections import Counter, defaultdict
-from typing import Iterable, Tuple, Dict, List
+from typing import Iterable, Tuple, Dict, List, Optional
 
 from common.models.task import TaskStruct
 from common.models.state import GraphInstanceState, TaskState
 from util.config import Config, ConfigField, create_dict_field_type, create_list_field_type, StrListConfigField, \
     DateTimeField
+from util.dependency_loops import detect_loop
 
 
 class UnknownTasksInDeps(Exception):
     def __init__(self, tasks: 'Iterable[str]'):
-        self.tasks = tasks
+        self.tasks = list(tasks)
 
     def __str__(self):
         return 'Unknown tasks found in deps graph: {}'.format(', '.join(self.tasks))
@@ -18,7 +19,7 @@ class UnknownTasksInDeps(Exception):
 
 class DuplicateTasksFound(Exception):
     def __init__(self, task_dups: 'Iterable[Tuple[str, int]]'):
-        self.task_dups = task_dups
+        self.task_dups = list(task_dups)
 
     def __str__(self):
         return 'Duplicate tasks found in graph: {}'.format(', '.join(k for k, v in self.task_dups))
@@ -26,10 +27,18 @@ class DuplicateTasksFound(Exception):
 
 class UnknownClusters(Exception):
     def __init__(self, clusters: 'Iterable[str]'):
-        self.clusters = clusters
+        self.clusters = list(clusters)
 
     def __str__(self):
         return 'Unknown clusters mentioned: {}'.format(', '.join(self.clusters))
+
+
+class DependencyLoopFound(Exception):
+    def __init__(self, loop: 'Iterable[str]'):
+        self.loop = list(loop)
+
+    def __str__(self):
+        return 'Loop in task dependencies found: {}'.format('->'.join(self.loop))
 
 
 class ExtendedTaskStruct(Config):
@@ -67,7 +76,10 @@ class TaskDependencies(create_dict_field_type(StrListConfigField)):
         not_found_tasks.update(value_tasks - all_tasks)
         if not_found_tasks:
             raise UnknownTasksInDeps(not_found_tasks)
-        # FIXME: check for cycles
+        # Checking for cycles
+        loop = detect_loop(self)
+        if loop:
+            raise DependencyLoopFound(loop)
 
 
 class GraphStruct(Config):

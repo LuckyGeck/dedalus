@@ -1,12 +1,13 @@
 #!/usr/bin/env python
+import argparse
 from time import sleep
 from master.api_client import MasterApiClient
 import json
 
 
-def main():
+def main(args):
     cli = MasterApiClient(master_host='localhost', master_port=8080)
-    graph_name, graph_rev = cli.create_graph(graph_struct=json.load(open('master/tests/simple_graph.json')),
+    graph_name, graph_rev = cli.create_graph(graph_struct=json.load(open(args.path)),
                                              graph_name='test_graph')
     print('Created graph: {}, rev: {}'.format(graph_name, graph_rev))
     instance_id = cli.launch_graph(graph_name, int(graph_rev))
@@ -26,6 +27,8 @@ def main():
         if state.is_terminal:
             break
 
-
 if __name__ == '__main__':
-    main()
+    parser = argparse.ArgumentParser()
+    parser.add_argument('-p', '--path', help='Path to graph file', default='master/tests/simple_graph.json')
+    args = parser.parse_args()
+    main(args)

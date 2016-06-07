@@ -131,6 +131,7 @@ class MasterApp:
         return ResultOk(instance_id=instance_id, task_name=task_name, host=host, log_type=log_type,
                         data=WorkerApiClient(worker_host=host).get_task_log(host_info.task_id, log_type))
 
+
 class MasterApi(CommonApi):
     def __init__(self, loop, cfg: MasterConfig) -> None:
         super().__init__(loop=loop, api_config=cfg.api, app_config=cfg)
