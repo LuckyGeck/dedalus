@@ -1,0 +1,15 @@
+{
+  "clusters": {
+    "I": [ "worker1" ]
+  },
+  "tasks": [
+    {
+      "task_name": "1",
+      "task_struct": {
+        "executor": { "name": "shell", "config": { "shell_script": "", "shell_bin": "ruby" } }
+      },
+      "hosts": ["I"]
+    }
+  ],
+  "deps": {}
+}

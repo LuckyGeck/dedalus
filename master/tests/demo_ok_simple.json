@@ -1,0 +1,20 @@
+{
+  "clusters": {
+    "I": [
+      "worker1"
+    ]
+  },
+  "tasks": [
+    {
+      "task_name": "1",
+      "task_struct": {
+        "executor": {
+          "name": "shell", "config": { "shell_script": "echo 'Hello, world!' ; exit 0" }
+        }
+      },
+      "hosts": ["I"]
+    }
+  ],
+  "deps": {
+  }
+}

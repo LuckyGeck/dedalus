@@ -1,0 +1,23 @@
+{
+  "clusters": {
+    "I": [
+      "worker1"
+    ]
+  },
+  "tasks": [
+    {
+      "task_name": "1",
+      "task_struct": {
+        "resources": [
+          { "name": "local_file", "config": { "local_path": "/no_such_file" } }
+        ],
+        "executor": {
+          "name": "shell", "config": { "shell_script": "echo 'Hello, world!'" }
+        }
+      },
+      "hosts": ["I"]
+    }
+  ],
+  "deps": {
+  }
+}
