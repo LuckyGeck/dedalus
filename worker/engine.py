@@ -42,7 +42,7 @@ class TaskExecution(Thread):
                 resource.ensure()
             except Exception as ex:
                 print(ex)
-                prep_error = ex
+                prep_error = str(ex)
                 break
         task_info = self.backend.read_task_info(self.task_id)
         task_info.exec_stats.finish_preparation(
