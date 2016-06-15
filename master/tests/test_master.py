@@ -26,25 +26,27 @@ def main(args):
             print('\n'.join('\tHost {}: {}'.format(host, info.state.name)
                             for host, info in task_info.per_host_info.items()))
         if state.is_terminal:
+            print('*' * 20)
             if state.name == GraphInstanceState.failed:
-                print('Fail msg: {}'.format(data.exec_stats.fail_msg))
+                print('Failed!')
+                if data.exec_stats.fail_msg:
+                    print('Fail msg: {}'.format(data.exec_stats.fail_msg))
             elif state.name == GraphInstanceState.finished:
-                print('Success!\n\n')
-            print('\n========================\nLOGS:')
+                print('Success!')
+            print('LOGS:')
             for task_name, task_info in data.exec_stats.per_task_execution_info.items():
-                print('# Task', task_name)
+                print(' Task', task_name)
                 for host in task_info.per_host_info.keys():
                     out = cli.instance_logs(instance_id, task_name, host, 'out')
                     err = cli.instance_logs(instance_id, task_name, host, 'err')
-                    print('## Host', host)
-                    if out is not None:
-                        print('### Out:\n==============')
-                        print(out)
-                        print('==============')
-                    if err is not None:
-                        print('### Err:\n==============')
-                        print(err)
-                        print('==============')
+                    print('  Host', host)
+                    if out:
+                        print('   Out:')
+                        print(''.join('+++>{}'.format(_) for _ in out.strip().splitlines(keepends=True)))
+                    if err:
+                        print('   Err:')
+                        print(''.join('--->{}'.format(_) for _ in err.strip().splitlines(keepends=True)))
+                print('-' * 10)
             break
 
 if __name__ == '__main__':
