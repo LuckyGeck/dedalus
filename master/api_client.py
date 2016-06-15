@@ -123,11 +123,13 @@ class MasterApiClient:
                     GraphInstanceState().from_json(payload['new_state']))
         raise InstanceStateChangeFailed(data)
 
-    def instance_logs(self, instance_id: str, task_name: str, host: str, log_type: str = 'out') -> str:
+    def instance_logs(self, instance_id: str, task_name: str, host: str, log_type: str = 'out') -> Optional[str]:
         """Reads log from remote worker
-        :returns str: The contents of the log"""
+        :returns Optional[str]: The contents of the log. None, if log is empty or not found.
+        """
         data = requests.get('{}/logs/{}/{}/{}'.format(self._get_instance_url(instance_id), task_name, host, log_type))
-        return data.json()['payload']['data']
+        if data.ok:
+            return data.json()['payload']['data']
 
 # ('GET', '/ping', 'ping'),
 # ('GET', '/v1.0/graphs', 'list_graphs'),
