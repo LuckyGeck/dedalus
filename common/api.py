@@ -113,7 +113,6 @@ class CommonApi(metaclass=abc.ABCMeta):
             result = ResultError(code=ErrorCode.app_error, reason=str(e))
         except Exception as e:
             self.logger.error('Exception [%s]: %s; trace: %s', e.__class__.__name__, e, traceback.format_exc())
-            print(e.loop)
             result = ResultError(code=ErrorCode.app_error, exception=e.__class__.__name__, reason=str(e))
         return json_response(result.to_dict(), status=result.code)
 
