@@ -9,7 +9,7 @@ from itertools import islice
 from uuid import uuid4
 
 from aiohttp.web_reqrep import Request
-from common.api import CommonApi, ResultOk, ResultError
+from common.api import CommonApi, ResultOk, ResultError, ResultNotFound
 from common.models.state import TaskState
 from worker.backend import WorkerBackends
 from worker.config import WorkerConfig
@@ -87,8 +87,11 @@ class WorkerApp:
         # TODO: extract calculation of execution data root
         self.backend.read_task_info(task_id)  # just verify that this task exists
         log_path = os.path.join(self.config.plugins.execution_data_root, task_id, 'std{}.log'.format(log_type))
-        with open(log_path, 'r') as f:
-            return ResultOk(log_type=log_type, data=f.read())
+        try:
+            with open(log_path, 'r') as f:
+                return ResultOk(log_type=log_type, data=f.read())
+        except:
+            return ResultNotFound()
 
 
 class WorkerApi(CommonApi):

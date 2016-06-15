@@ -1,4 +1,5 @@
 import os
+import traceback
 from threading import Thread, Event
 
 from common.models.task import TaskInfo
@@ -53,12 +54,12 @@ class TaskExecution(Thread):
         return prep_error is None
 
     def execute_task(self):
-        it = self.executor.start()
         task_info = self.backend.read_task_info(self.task_id)
         task_info.exec_stats.start_execution()
         self.backend.write_task_info(self.task_id, task_info)
         return_code = None
         try:
+            it = self.executor.start()
             with open(os.path.join(self.executor.work_dir, 'stdout.log'), 'a') as out_file:
                 with open(os.path.join(self.executor.work_dir, 'stderr.log'), 'a') as err_file:
                     for stdout, stderr in it:
@@ -69,6 +70,11 @@ class TaskExecution(Thread):
         except ExecutionEnded as ex:
             print('Execution ended! RetCode:', ex.retcode)
             return_code = ex.retcode
+        except Exception as ex:
+            print('Exception during task execution! Error: {}'.format(str(ex)))
+            with open(os.path.join(self.executor.work_dir, 'stderr.log'), 'a') as err_file:
+                print(traceback.format_exc(), file=err_file)
+            return_code = -1
         task_info.exec_stats.finish_execution(retcode=return_code,
                                               is_initiated_by_user=self.user_stop.is_set())
         self.backend.write_task_info(self.task_id, task_info)
