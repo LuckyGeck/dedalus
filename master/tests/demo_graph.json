@@ -1,0 +1,52 @@
+{
+  "clusters": {
+    "I": [
+      "worker1"
+    ]
+  },
+  "tasks": [
+    {
+      "task_name": "1",
+      "task_struct": {
+        "resources": [
+          {
+            "name": "local_file",
+            "config": {
+              "local_path": "/dev/urandom"
+            }
+          }
+        ],
+        "executor": {
+          "name": "shell",
+          "config": {
+            "shell_bin": "bash",
+            "shell_script": "echo $(date); sleep 1; echo $(date); sleep 1; echo $(date) >> /dev/stderr; sleep 1; echo $(date) >> /dev/stderr; sleep 1; exit 0; "
+          }
+        }
+      },
+      "hosts": ["I"]
+    },
+    {
+      "task_name": "2",
+      "task_struct": {
+        "executor": {
+          "name": "shell", "config": { "shell_script": "echo 2; date" }
+        }
+      },
+      "hosts": ["I"]
+    },
+    {
+      "task_name": "3",
+      "task_struct": {
+        "executor": {
+          "name": "shell", "config": { "shell_script": "echo 3; date" }
+        }
+      },
+      "hosts": ["I"]
+    }
+  ],
+  "deps": {
+    "3": ["2"],
+    "1": ["2", "3"]
+  }
+}
